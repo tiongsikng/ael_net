@@ -2,7 +2,6 @@
 # Boiler Codes - Import Dependencies
 
 # if __name__ == '__main__': # used for Windows freeze_support() issues, indent the rest of the lines below
-# if __name__ == '__main__': # used for Windows freeze_support() issues, indent the rest of the lines below
 from torch.optim import lr_scheduler
 import torch.nn as nn
 import torch.optim as optim
@@ -206,8 +205,6 @@ del state_dict_loaded, state_dict_pretrained, state_dict_temp
 
 out_features = args.dim 
 
-# for AELNet or MobileFaceNet
-in_features  = model.linear.in_features
 # for AELNet or MobileFaceNet
 in_features  = model.linear.in_features
 model.linear = nn.Linear(in_features, out_features, bias = True)                      # Deep Embedding Layer
@@ -442,7 +439,7 @@ for epoch in range(epochs):
         file.write('Test Rank-1 IR (Cross Face) \t: ' + str(ethnic_cross_face_acc) + "\n\n")
         file.close()
 
-
+    # save best model based on Rank-1 IR validation
     if peri_val_acc >= peri_best_test_acc and epoch + 1 >= lr_sch[0] and save == True:
     # if peri_pr_test_acc >= peri_best_pr_test_acc and epoch >= epochs - 10: # = lr_sch[1]:            
         best_epoch = epoch + 1
