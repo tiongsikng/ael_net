@@ -12,8 +12,6 @@ from sklearn.model_selection import KFold
 import network.SOTA.HA_ViT.HA_ViT as net
 from network import load_model
 
-import configs.params as params
-
 torch.backends.cudnn.enabled = True
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False

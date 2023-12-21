@@ -1,5 +1,5 @@
-import sys
-sys.path.insert(0, '/home/tiongsik/PycharmProjects/magnum_opus/')
+import sys, os
+sys.path.insert(0, os.path.abspath('.'))
 import numpy as np
 import torch
 from torch.utils.data import DataLoader, SubsetRandomSampler
