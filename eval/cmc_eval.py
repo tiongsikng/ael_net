@@ -17,6 +17,7 @@ torch.backends.cudnn.enabled = True
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 torch.multiprocessing.set_sharing_strategy('file_system')
+
 cm_cmc_dict_p = {}
 cm_cmc_avg_dict_p = {}
 cm_cmc_dict_f = {}

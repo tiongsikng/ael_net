@@ -12,14 +12,18 @@ from PIL import Image
 from sklearn.metrics import roc_auc_score, plot_roc_curve, roc_curve
 from configs import datasets_config as config
 import network.ael_net as net
+
 torch.backends.cudnn.enabled = True
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+torch.multiprocessing.set_sharing_strategy('file_system')
 
 batch_size = 400
 eer_dict = {'ethnic' : 0, 'pubfig' : 0, 'facescrub': 0, 'imdb_wiki' : 0, 'ar' : 0}
 auc_dict = {}
 fpr_dict = {}
 tpr_dict = {}
-dset_list = ['ethnic', 'pubfig', 'facescrub', 'imdb_wiki', 'ar'] # YouTube Faces NOT included
+dset_list = ['ethnic', 'pubfig', 'facescrub', 'imdb_wiki', 'ar']
 ver_img_per_class = 4
 
 def create_folder(method):

@@ -26,8 +26,6 @@ if __name__ == '__main__': # used for Windows freeze_support() issues, indent th
     from data import data_loader as data_loader
     from network.logits import ArcFace
     import network.ael_net as net
-    # import network.facexzoo_network.mobilefacenet as net
-    # import network.facexzoo_network.resnet_ir_50 as net
     import train
     from network import load_model
     from eval import verification
@@ -59,6 +57,8 @@ if __name__ == '__main__': # used for Windows freeze_support() issues, indent th
 
     # Determine if an nvidia GPU is available
     device = params.device
+    start_ = datetime.now()
+    start_string = start_.strftime("%Y%m%d_%H%M%S")
 
     # For reproducibility, Seed the RNG for all devices (both CPU and CUDA):
     torch.manual_seed(seed)
@@ -149,6 +149,7 @@ if __name__ == '__main__': # used for Windows freeze_support() issues, indent th
     # print('Num. of Test Imgs (Periocular) \t:', face_num_test)
 
     print('\n***** Other Parameters *****\n')
+    print('Start Time \t\t: ', start_string)
     print('Method (Backbone)\t: ', args.method)
     print('Remarks\t\t\t: ', args.remarks)
     print('Net. Descr.\t\t: ', net_descr)
@@ -158,7 +159,7 @@ if __name__ == '__main__': # used for Windows freeze_support() issues, indent th
     print('Batch Size\t\t: ', batch_size)
     print('Random Batch Size\t\t: ', random_batch_size)
     print('Test Batch Size\t\t: ', test_batch_size)
-    print('Emb. Dimension\t\t:', args.dim)
+    print('Emb. Dimension\t\t: ', args.dim)
     print('# Epoch\t\t\t: ', epochs)
     print('Learning Rate\t\t: ', args.lr)
     print('LR Scheduler\t\t: ', lr_sch)
@@ -318,9 +319,7 @@ if __name__ == '__main__': # used for Windows freeze_support() issues, indent th
     #### Model Training
 
     #### Define Logging
-    train_mode = 'train'
-    start_ = datetime.now()
-    start_string = start_.strftime("%Y%m%d_%H%M%S")
+    train_mode = 'train'    
     log_folder = "./logs/" + str(args.method) + "_" + str(start_string) + "_" + str(args.remarks)
     if not os.path.exists(log_folder) and args.write_log is True:
         os.makedirs(log_folder)
@@ -415,9 +414,9 @@ if __name__ == '__main__': # used for Windows freeze_support() issues, indent th
         # *****
         
         # print('Periocular')
-        _, peri_val_acc = train.run_test(model, peri_loader_val, peri_loader_test, device = device, peri_flag = True)
+        _, peri_val_acc = identification.crossmodal_id(model, peri_loader_val, peri_loader_test, device = device, peri_flag = True, gallery='peri')
         peri_val_acc = np.around(peri_val_acc, 4)
-        print('Validation Rank-1 IR (Periocular)\t: ', peri_val_acc)    
+        print('Validation Rank-1 IR (Cross - Periocular)\t: ', peri_val_acc)    
 
         # Testing (Ethnic)
         _, ethnic_cross_peri_acc = identification.crossmodal_id(model, ethnic_face_test_loader, ethnic_peri_val_loader,
