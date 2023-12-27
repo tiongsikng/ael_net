@@ -1,6 +1,8 @@
 # Attention-aware Ensemble Learning Network (AELNet)
 ## AELNet for Face-Periocular Cross-Modality Matching (FPCM)
 
+![Network Architecture](AEL_Net_Architecture.jpg?raw=true "AELNet")
+
 The project directories are as follows:
 
 - configs: Dataset path configuration file and hyperparameters.
@@ -20,7 +22,7 @@ The project directories are as follows:
 - logs: Directory where logs are generated.
     * _Logs will be generated in this directory. Each log folder will contain backups of training files with network files used._
 - models: Directory to store pre-trained models. Trained models are also generated in this directory.
-    * __**INSERT PRE-TRAINED MODELS HERE**__
+    * __**INSERT PRE-TRAINED MODELS HERE. The base MobileFaceNet for fine-tuning the GC<sup>2</sup>SA-Net can be downloaded in [this link](https://www.dropbox.com/scl/fo/sx61beaupkwa1574fst2z/h?rlkey=onwf8vji3h20og0w7s6sxznlc&dl=0).**__
     * _Trained models will also be stored in this directory._
 - network: Contains loss functions and network related files.
     * `facexzoo_network` - Directory contains architecture files from FaceXZoo.
