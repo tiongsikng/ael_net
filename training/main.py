@@ -27,7 +27,6 @@ if __name__ == '__main__': # used for Windows freeze_support() issues, indent th
     from network.logits import ArcFace
     import network.ael_net as net
     import train
-    from network import load_model
     from eval import verification
     from eval import identification
     torch.multiprocessing.set_sharing_strategy('file_system')
@@ -172,6 +171,7 @@ if __name__ == '__main__': # used for Windows freeze_support() issues, indent th
     print('Save Flag\t\t: ', save)
     print('Log Writing\t\t: ', args.write_log)
 
+
     # *** *** *** ***
     # Load Pre-trained Model, Define Loss and Other Hyperparameters for Training
 
@@ -208,8 +208,8 @@ if __name__ == '__main__': # used for Windows freeze_support() issues, indent th
 
     # for AELNet or MobileFaceNet
     in_features  = model.linear.in_features
-    model.linear = nn.Linear(in_features, out_features, bias = True)                      # Deep Embedding Layer
-    model.bn = nn.BatchNorm1d(out_features, eps = 1e-5, momentum = 0.1, affine = True) # BatchNorm1d Layer
+    # model.linear = nn.Linear(in_features, out_features, bias = True)                      # Deep Embedding Layer
+    # model.bn = nn.BatchNorm1d(out_features, eps = 1e-5, momentum = 0.1, affine = True) # BatchNorm1d Layer
 
     #### model summary
     # torch.cuda.empty_cache()
@@ -274,7 +274,7 @@ if __name__ == '__main__': # used for Windows freeze_support() issues, indent th
 
     # *** ***
 
-    # FC : Determine parameters to be freezed, or unfreezed
+    # FC Layers : Determine parameters to be freezed, or unfreezed
     for param in psi_1.parameters():
         param.requires_grad = True
 
@@ -315,6 +315,7 @@ if __name__ == '__main__': # used for Windows freeze_support() issues, indent th
                 'lr' : args.lr, 'lr_sch': lr_sch, 'w_decay' : args.w_decay, 'dropout' : args.dropout,
                 'batch_sub' : batch_sub, 'batch_samp' : batch_samp, 'batch_size' : batch_size, 'dims' : args.dim, 'seed' : seed }
 
+
     # *** *** *** ***
     #### Model Training
 
@@ -347,7 +348,8 @@ if __name__ == '__main__': # used for Windows freeze_support() issues, indent th
         file.write(json.dumps(net_params) + "\n\n")
         file.close()
 
-    # *** ***
+
+    # *** *** *** ***
     #### Begin Training
 
     best_train_acc = 0
@@ -414,18 +416,18 @@ if __name__ == '__main__': # used for Windows freeze_support() issues, indent th
         # *****
         
         # print('Periocular')
-        _, peri_val_acc = identification.crossmodal_id(model, peri_loader_val, peri_loader_test, device = device, peri_flag = True, gallery='peri')
+        peri_val_acc = identification.crossmodal_id(model, peri_loader_val, peri_loader_test, device=device, peri_flag=True, gallery='peri')
         peri_val_acc = np.around(peri_val_acc, 4)
         print('Validation Rank-1 IR (Cross - Periocular)\t: ', peri_val_acc)    
 
         # Testing (Ethnic)
-        _, ethnic_cross_peri_acc = identification.crossmodal_id(model, ethnic_face_test_loader, ethnic_peri_val_loader,
-                                                            device = device, proto_flag = False, face_model = None, peri_model = None, gallery = 'peri')
+        ethnic_cross_peri_acc = identification.crossmodal_id(model, ethnic_face_test_loader, ethnic_peri_val_loader,
+                                                            device=device, face_model=None, peri_model=None, gallery='peri')
         ethnic_cross_peri_acc = np.around(ethnic_cross_peri_acc, 4)
         print('Test Rank-1 IR (Ethnic Cross - Periocular)\t: ', ethnic_cross_peri_acc)   
 
-        _, ethnic_cross_face_acc = identification.crossmodal_id(model, ethnic_face_val_loader, ethnic_peri_test_loader, 
-                                                            device = device, proto_flag = False, face_model = None, peri_model = None, gallery = 'face')
+        ethnic_cross_face_acc = identification.crossmodal_id(model, ethnic_face_val_loader, ethnic_peri_test_loader, 
+                                                            device=device, face_model=None, peri_model=None, gallery='face')
         ethnic_cross_face_acc = np.around(ethnic_cross_face_acc, 4)
         print('Test Rank-1 IR (Ethnic Cross - Face)\t: ', ethnic_cross_face_acc)    
         
@@ -439,13 +441,9 @@ if __name__ == '__main__': # used for Windows freeze_support() issues, indent th
             file.close()
 
         # save best model based on Rank-1 IR validation
-        if peri_val_acc >= peri_best_test_acc and epoch + 1 >= lr_sch[0] and save == True:
-        # if peri_pr_test_acc >= peri_best_pr_test_acc and epoch >= epochs - 10: # = lr_sch[1]:            
+        if peri_val_acc >= peri_best_test_acc and epoch + 1 >= lr_sch[0] and save == True:         
             best_epoch = epoch + 1
             best_train_acc = train_acc
-            # best_test_acc = test_acc
-
-            # peri_best_train_acc = peri_train_acc
             peri_best_test_acc = peri_val_acc
 
             best_model = copy.deepcopy(model.state_dict())
@@ -485,9 +483,7 @@ if __name__ == '__main__': # used for Windows freeze_support() issues, indent th
             if not os.path.exists(save_best_acc_dir):
                 os.makedirs(save_best_acc_dir)  
                     
-            tag = str(args.method) + '_S' + str(af_s) + '_M' + str(af_m) + '_' + str(args.remarks)
-
-            tag = tag + '_BN' + str(bn_flag) + '_M' + str(bn_moment)       
+            tag = str(args.method) + '_' + str(args.remarks)    
 
             save_best_model_path = save_best_model_dir + tag + '_' + str(start_string) + '.pth'
             save_best_psi_1_path = save_best_psi_1_dir + tag + '_' + str(start_string) + '.pth' 
@@ -522,35 +518,67 @@ if __name__ == '__main__': # used for Windows freeze_support() issues, indent th
         file.write("Model: " + str(save_best_model_path) + "\n\n")    
         file.close()
 
+
     # *** *** *** ***
     # Evaluation (Validation)
     print('**** Validation **** \n')
     # Identification - Validation
     print('Periocular - Validation')
-    _, peri_val_acc = train.run_test(model, peri_loader_val, peri_loader_test, device = device, peri_flag = True)
+    peri_val_acc = identification.intramodal_id(model, peri_loader_val, peri_loader_test, device=device, peri_flag=True)
     peri_val_acc = np.around(peri_val_acc, 4)
     print('Validation Rank-1 IR (Periocular)\t: ', peri_val_acc)
 
     print('Face - Validation')
-    _, face_val_acc = train.run_test(model, face_loader_val, face_loader_test, device = device, peri_flag = False)
+    face_val_acc = identification.intramodal_id(model, face_loader_val, face_loader_test, device=device, peri_flag=False)
     face_val_acc = np.around(face_val_acc, 4)
     print('Validation Rank-1 IR (Face)\t: ', face_val_acc)
+
 
     # *** *** *** ***
     #### Identification and Verification for Test Datasets ( Ethnic, Pubfig, FaceScrub, IMDb Wiki, AR)
 
     print('\n**** Testing Evaluation (All Datasets) **** \n')
-    #### Cross-modal Identification (Face and Periocular)
-    print("Cross-Modal Rank-1 IR\n")
-    cm_id_dict_f, cm_id_dict_p= identification.kfold_cm_id(model, root_pth = config.evaluation['identification'], device = device)
-    cm_id_dict_f, cm_id_dict_p = copy.deepcopy(cm_id_dict_f), copy.deepcopy(cm_id_dict_p)
-    print(cm_id_dict_p, cm_id_dict_f)
+    #### Intra-Modal Identification and Verification (Periocular)
+    print("Intra-Modal Rank-1 IR\n")
+    peri_id_dict = identification.im_id_main(model, peri_flag=True, root_pth=config.evaluation['identification'], device=device)
+    peri_id_dict = identification.get_avg(peri_id_dict)
+    peri_id_dict = copy.deepcopy(peri_id_dict)
+    print('Average IR (Intra-Modal Periocular): \n', peri_id_dict['avg'], '±', peri_id_dict['std'])
+    # *** #
+    print("Intra-Modal EER\n")
+    peri_eer_dict = verification.im_verify(model, emb_size=args.dim, peri_flag=True, root_drt=config.evaluation['verification'], device=device)
+    peri_eer_dict = copy.deepcopy(peri_eer_dict)
+    peri_eer_dict = verification.get_avg(peri_eer_dict)
+    print('Average EER (Intra-Modal Periocular):', peri_eer_dict['avg'], '±', peri_eer_dict['std'])
 
-    #### Cross-modal Verification (Face and Periocular)
+    #### Intra-Modal Identification and Verification (Face)
+    print("Intra-Modal Rank-1 IR\n")
+    face_id_dict = identification.im_id_main(model, peri_flag=False, root_pth=config.evaluation['identification'], device=device)
+    face_id_dict = identification.get_avg(face_id_dict)
+    face_id_dict = copy.deepcopy(face_id_dict)
+    print('Average IR (Intra-Modal Face): \n', face_id_dict['avg'], '±', face_id_dict['std'])
+    # *** #
+    print("Intra-Modal EER\n")
+    face_eer_dict = verification.im_verify(model, emb_size=args.dim, peri_flag=False, root_drt=config.evaluation['verification'], device=device)
+    face_eer_dict = copy.deepcopy(face_eer_dict)
+    face_eer_dict = verification.get_avg(face_eer_dict)
+    print('Average EER (Intra-Modal Face):', face_eer_dict['avg'], '±', face_eer_dict['std'])
+
+    #### Cross-modal Identification and Verification (Face and Periocular)
+    print("Cross-Modal Rank-1 IR\n")
+    cm_id_dict_p, cm_id_dict_f = identification.cm_id_main(model, root_pth=config.evaluation['identification'], face_model=None, peri_model=None, device=device)
+    cm_id_dict_p, cm_id_dict_f = identification.get_avg(cm_id_dict_p), identification.get_avg(cm_id_dict_f)
+    cm_id_dict_p = copy.deepcopy(cm_id_dict_p)
+    cm_id_dict_f = copy.deepcopy(cm_id_dict_f)
+    print('Average IR (Cross-Modal Periocular): \n', cm_id_dict_p['avg'], '±', cm_id_dict_p['std'])
+    print('Average IR (Cross-Modal Face): \n', cm_id_dict_f['avg'], '±', cm_id_dict_f['std'])
+    # *** #
     print("Cross-Modal EER\n")
-    cm_eer_dict = verification.cm_verify(model, face_model = None, peri_model = None, emb_size = out_features, root_drt = config.evaluation['verification'], device = device)    
+    cm_eer_dict = verification.cm_verify(model, face_model=None, peri_model=None, emb_size=args.dim, root_drt=config.evaluation['verification'], device=device)
     cm_eer_dict = copy.deepcopy(cm_eer_dict)
-    print(cm_eer_dict)
+    cm_eer_dict = verification.get_avg(cm_eer_dict)
+    print('Average EER (Cross-Modal):', cm_eer_dict['avg'], '±', cm_eer_dict['std'])
+
 
     # *** *** *** ***
     # Dataset Performance Summary
@@ -559,70 +587,121 @@ if __name__ == '__main__': # used for Windows freeze_support() issues, indent th
     # *** ***
     print('\n\n Ethnic \n')
 
-    ethnic_cm_acc_p = cm_id_dict_p['ethnic']
-    ethnic_cm_acc_f = cm_id_dict_f['ethnic']
+    ethnic_ir_peri = peri_id_dict['ethnic']    
+    ethnic_ir_face = face_id_dict['ethnic']    
+    ethnic_cm_ir_p = cm_id_dict_p['ethnic']
+    ethnic_cm_ir_f = cm_id_dict_f['ethnic']
+    ethnic_eer_peri = peri_eer_dict['ethnic']
+    ethnic_eer_face = face_eer_dict['ethnic']
     ethnic_cm_eer = cm_eer_dict['ethnic']
 
-    print('Cross-modal Rank-1 IR - Periocular Gallery\t: ', ethnic_cm_acc_p)
-    print('Cross-modal Rank-1 IR - Face Gallery\t: ', ethnic_cm_acc_f)
-    print('Cross-modal EER \t: ', ethnic_cm_eer)
+    print('Intra-Modal Rank-1 IR (Periocular)\t: ', ethnic_ir_peri)    
+    print('Intra-Modal Rank-1 IR (Face)\t: ', ethnic_ir_face)    
+    print('Cross-Modal Rank-1 IR - Periocular Gallery\t: ', ethnic_cm_ir_p)
+    print('Cross-Modal Rank-1 IR - Face Gallery\t: ', ethnic_cm_ir_f)
+    print('Intra-Modal EER (Periocular)\t: ', ethnic_eer_peri)
+    print('Intra-Modal EER (Face)\t: ', ethnic_eer_face)
+    print('Cross-Modal EER \t: ', ethnic_cm_eer)
+
 
     # *** ***
     print('\n\n Pubfig \n')
 
-    pubfig_cm_acc_p = cm_id_dict_p['pubfig']
-    pubfig_cm_acc_f = cm_id_dict_f['pubfig']
+    pubfig_ir_peri = peri_id_dict['pubfig']    
+    pubfig_ir_face = face_id_dict['pubfig']    
+    pubfig_cm_ir_p = cm_id_dict_p['pubfig']
+    pubfig_cm_ir_f = cm_id_dict_f['pubfig']
+    pubfig_eer_peri = peri_eer_dict['pubfig']
+    pubfig_eer_face = face_eer_dict['pubfig']
     pubfig_cm_eer = cm_eer_dict['pubfig']
 
-    print('Cross-modal Rank-1 IR - Periocular Gallery\t: ', pubfig_cm_acc_p)
-    print('Cross-modal Rank-1 IR - Face Gallery\t: ', pubfig_cm_acc_f)
-    print('Cross-modal EER \t: ', pubfig_cm_eer)
+    print('Intra-Modal Rank-1 IR (Periocular)\t: ', pubfig_ir_peri)    
+    print('Intra-Modal Rank-1 IR (Face)\t: ', pubfig_ir_face)    
+    print('Cross-Modal Rank-1 IR - Periocular Gallery\t: ', pubfig_cm_ir_p)
+    print('Cross-Modal Rank-1 IR - Face Gallery\t: ', pubfig_cm_ir_f)
+    print('Intra-Modal EER (Periocular)\t: ', pubfig_eer_peri)
+    print('Intra-Modal EER (Face)\t: ', pubfig_eer_face)
+    print('Cross-Modal EER \t: ', pubfig_cm_eer)
+
 
     # *** ***
     print('\n\n FaceScrub\n')
 
-    facescrub_cm_acc_p = cm_id_dict_p['facescrub']
-    facescrub_cm_acc_f = cm_id_dict_f['facescrub']
+    facescrub_ir_peri = peri_id_dict['facescrub']    
+    facescrub_ir_face = face_id_dict['facescrub']    
+    facescrub_cm_ir_p = cm_id_dict_p['facescrub']
+    facescrub_cm_ir_f = cm_id_dict_f['facescrub']
+    facescrub_eer_peri = peri_eer_dict['facescrub']
+    facescrub_eer_face = face_eer_dict['facescrub']
     facescrub_cm_eer = cm_eer_dict['facescrub']
 
-    print('Cross-modal Rank-1 IR - Periocular Gallery\t: ', facescrub_cm_acc_p)
-    print('Cross-modal Rank-1 IR - Face Gallery\t: ', facescrub_cm_acc_f)
-    print('Cross-modal EER \t: ', facescrub_cm_eer)
+    print('Intra-Modal Rank-1 IR (Periocular)\t: ', facescrub_ir_peri)    
+    print('Intra-Modal Rank-1 IR (Face)\t: ', facescrub_ir_face)    
+    print('Cross-Modal Rank-1 IR - Periocular Gallery\t: ', facescrub_cm_ir_p)
+    print('Cross-Modal Rank-1 IR - Face Gallery\t: ', facescrub_cm_ir_f)
+    print('Intra-Modal EER (Periocular)\t: ', facescrub_eer_peri)
+    print('Intra-Modal EER (Face)\t: ', facescrub_eer_face)
+    print('Cross-Modal EER \t: ', facescrub_cm_eer)
 
 
     # *** *** *** ***
     print('\n\n IMDB Wiki \n')
 
-    imdb_wiki_cm_acc_p = cm_id_dict_p['imdb_wiki']
-    imdb_wiki_cm_acc_f = cm_id_dict_f['imdb_wiki']
+    imdb_wiki_ir_peri = peri_id_dict['imdb_wiki']    
+    imdb_wiki_ir_face = face_id_dict['imdb_wiki']    
+    imdb_wiki_cm_ir_p = cm_id_dict_p['imdb_wiki']
+    imdb_wiki_cm_ir_f = cm_id_dict_f['imdb_wiki']
+    imdb_wiki_eer_peri = peri_eer_dict['imdb_wiki']
+    imdb_wiki_eer_face = face_eer_dict['imdb_wiki']
     imdb_wiki_cm_eer = cm_eer_dict['imdb_wiki']
 
-    print('Cross-modal Rank-1 IR - Periocular Gallery\t: ', imdb_wiki_cm_acc_p)
-    print('Cross-modal Rank-1 IR - Face Gallery\t: ', imdb_wiki_cm_acc_f)
-    print('Cross-modal EER \t: ', imdb_wiki_cm_eer)
+    print('Intra-Modal Rank-1 IR (Periocular)\t: ', imdb_wiki_ir_peri)    
+    print('Intra-Modal Rank-1 IR (Face)\t: ', imdb_wiki_ir_face)    
+    print('Cross-Modal Rank-1 IR - Periocular Gallery\t: ', imdb_wiki_cm_ir_p)
+    print('Cross-Modal Rank-1 IR - Face Gallery\t: ', imdb_wiki_cm_ir_f)
+    print('Intra-Modal EER (Periocular)\t: ', imdb_wiki_eer_peri)
+    print('Intra-Modal EER (Face)\t: ', imdb_wiki_eer_face)
+    print('Cross-Modal EER \t: ', imdb_wiki_cm_eer)
+
 
     # *** *** *** ***
     print('\n\n AR \n')
 
-    ar_cm_acc_p = cm_id_dict_p['ar']
-    ar_cm_acc_f = cm_id_dict_f['ar']
+    ar_ir_peri = peri_id_dict['ar']    
+    ar_ir_face = face_id_dict['ar']    
+    ar_cm_ir_p = cm_id_dict_p['ar']
+    ar_cm_ir_f = cm_id_dict_f['ar']
+    ar_eer_peri = peri_eer_dict['ar']
+    ar_eer_face = face_eer_dict['ar']
     ar_cm_eer = cm_eer_dict['ar']
 
-    print('Cross-modal Rank-1 IR - Periocular Gallery\t: ', ar_cm_acc_p)
-    print('Cross-modal Rank-1 IR - Face Gallery\t: ', ar_cm_acc_f)
-    print('Cross-modal EER \t: ', ar_cm_eer)
+    print('Intra-Modal Rank-1 IR (Periocular)\t: ', ar_ir_peri)    
+    print('Intra-Modal Rank-1 IR (Face)\t: ', ar_ir_face)    
+    print('Cross-Modal Rank-1 IR - Periocular Gallery\t: ', ar_cm_ir_p)
+    print('Cross-Modal Rank-1 IR - Face Gallery\t: ', ar_cm_ir_f)
+    print('Intra-Modal EER (Periocular)\t: ', ar_eer_peri)
+    print('Intra-Modal EER (Face)\t: ', ar_eer_face)
+    print('Cross-Modal EER \t: ', ar_cm_eer)
 
     # *** *** *** ***
     #### Average of all Datasets
     print('\n\n\n Calculating Average \n')
 
+    avg_peri_ir = identification.get_avg(peri_id_dict)
+    avg_face_ir = identification.get_avg(face_id_dict)
     avg_cm_p_ir = identification.get_avg(cm_id_dict_p)
     avg_cm_f_ir = identification.get_avg(cm_id_dict_f)
+    avg_peri_eer = verification.get_avg(peri_eer_dict)
+    avg_face_eer = verification.get_avg(face_eer_dict)
     avg_cm_eer = verification.get_avg(cm_eer_dict)
 
-    print('Cross-modal Rank-1 IR - Periocular Gallery\t: ', avg_cm_p_ir['avg'])
-    print('Cross-modal Rank-1 IR - Face Gallery\t: ', avg_cm_f_ir['avg'])
-    print('Cross-modal EER \t: ', avg_cm_eer['avg'])
+    print('Intra-Modal Rank-1 IR (Periocular)\t: ', avg_peri_ir['avg'], '±', avg_peri_ir['std'])
+    print('Intra-Modal Rank-1 IR (Face)\t: ', avg_face_ir['avg'], '±', avg_face_ir['std'])
+    print('Cross-modal Rank-1 IR - Periocular Gallery\t: ', avg_cm_p_ir['avg'], '±', avg_cm_p_ir['std'])
+    print('Cross-modal Rank-1 IR - Face Gallery\t: ', avg_cm_f_ir['avg'], '±', avg_cm_f_ir['std'])
+    print('Intra-Modal EER (Periocular)\t: ', avg_peri_eer['avg'], '±', avg_peri_eer['std'])
+    print('Intra-Modal EER (Face)\t: ', avg_face_eer['avg'], '±', avg_face_eer['std'])
+    print('Cross-modal EER \t: ', avg_cm_eer['avg'], '±', avg_cm_eer['std'])
 
 
     # *** *** *** ***
@@ -631,33 +710,40 @@ if __name__ == '__main__': # used for Windows freeze_support() issues, indent th
     if args.write_log is True:
         file = open(log_nm, 'a+')
         file.write('****Ethnic:****')
-        file.write('\n\nCross-Modal (ID): \n Periocular Gallery - ' + str(cm_id_dict_p['ethnic']) + ', \n Face Gallery - ' + str(cm_id_dict_f['ethnic']))
-        file.write('\n\nCross-Modal (Ver): ' + str(cm_eer_dict['ethnic']) + '\n\n\n')
-        file.write('\n\nCross-Modal (Ver): ' + str(cm_eer_dict['ethnic']) + '\n\n\n')
+        file.write('\nFinal Rank-1 IR (Periocular): ' + str(peri_id_dict['ethnic']) + '\nFinal Rank-1 IR (Face): ' + str(face_id_dict['ethnic']))
+        file.write('\nFinal Rank-1 IR (Cross-Modal): \n Periocular Gallery - ' + str(cm_id_dict_p['ethnic']) + ', \n Face Gallery - ' + str(cm_id_dict_f['ethnic'])+ '\n\n')
+        file.write('\nFinal EER (Periocular): ' + str(peri_eer_dict['ethnic']) + '\nFinal EER (Face): ' + str(face_eer_dict['ethnic']))        
+        file.write('\nFinal EER (Cross-Modal): ' + str(cm_eer_dict['ethnic'])+ '\n\n')
         file.write('****Pubfig:****')
-        file.write('\n\nCross-Modal (ID): \n Periocular Gallery - ' + str(cm_id_dict_p['pubfig']) + ', \n Face Gallery - ' + str(cm_id_dict_f['pubfig']))
-        file.write('\n\nCross-Modal (Ver): ' + str(cm_eer_dict['pubfig']) + '\n\n\n')
-        file.write('\n\nCross-Modal (Ver): ' + str(cm_eer_dict['pubfig']) + '\n\n\n')
+        file.write('\nFinal Rank-1 IR (Periocular): ' + str(peri_id_dict['pubfig']) + '\nFinal Rank-1 IR (Face): ' + str(face_id_dict['pubfig']))
+        file.write('\nFinal Rank-1 IR (Cross-Modal): \n Periocular Gallery - ' + str(cm_id_dict_p['pubfig']) + ', \n Face Gallery - ' + str(cm_id_dict_f['pubfig'])+ '\n\n')
+        file.write('\nFinal EER (Periocular): ' + str(peri_eer_dict['pubfig']) + '\nFinal EER (Face): ' + str(face_eer_dict['pubfig']))        
+        file.write('\nFinal EER (Cross-Modal): ' + str(cm_eer_dict['pubfig'])+ '\n\n')
         file.write('****FaceScrub:****')
-        file.write('\n\nCross-Modal (ID): \n Periocular Gallery - ' + str(cm_id_dict_p['facescrub']) + ', \n Face Gallery - ' + str(cm_id_dict_f['facescrub']))    
-        file.write('\n\nCross-Modal (Ver): ' + str(cm_eer_dict['facescrub']) + '\n\n\n')
-        file.write('\n\nCross-Modal (ID): \n Periocular Gallery - ' + str(cm_id_dict_p['facescrub']) + ', \n Face Gallery - ' + str(cm_id_dict_f['facescrub']))    
-        file.write('\n\nCross-Modal (Ver): ' + str(cm_eer_dict['facescrub']) + '\n\n\n')
+        file.write('\nFinal Rank-1 IR (Periocular): ' + str(peri_id_dict['facescrub']) + '\nFinal Rank-1 IR (Face): ' + str(face_id_dict['facescrub']))
+        file.write('\nFinal Rank-1 IR (Cross-Modal): \n Periocular Gallery - ' + str(cm_id_dict_p['facescrub']) + ', \n Face Gallery - ' + str(cm_id_dict_f['facescrub'])+ '\n\n')
+        file.write('\nFinal EER (Periocular): ' + str(peri_eer_dict['facescrub']) + '\nFinal EER (Face): ' + str(face_eer_dict['facescrub']))        
+        file.write('\nFinal EER (Cross-Modal): ' + str(cm_eer_dict['facescrub'])+ '\n\n')
         file.write('****IMDB Wiki:****')
-        file.write('\n\nCross-Modal (ID): \n Periocular Gallery - ' + str(cm_id_dict_p['imdb_wiki']) + ', \n Face Gallery - ' + str(cm_id_dict_f['imdb_wiki']))
-        file.write('\n\nCross-Modal (Ver): ' + str(cm_eer_dict['imdb_wiki']) + '\n\n\n')
-        file.write('\n\nCross-Modal (Ver): ' + str(cm_eer_dict['imdb_wiki']) + '\n\n\n')
+        file.write('\nFinal Rank-1 IR (Periocular): ' + str(peri_id_dict['imdb_wiki']) + '\nFinal Rank-1 IR (Face): ' + str(face_id_dict['imdb_wiki']))
+        file.write('\nFinal Rank-1 IR (Cross-Modal): \n Periocular Gallery - ' + str(cm_id_dict_p['imdb_wiki']) + ', \n Face Gallery - ' + str(cm_id_dict_f['imdb_wiki'])+ '\n\n')
+        file.write('\nFinal EER (Periocular): ' + str(peri_eer_dict['imdb_wiki']) + '\nFinal EER (Face): ' + str(face_eer_dict['imdb_wiki']))        
+        file.write('\nFinal EER (Cross-Modal): ' + str(cm_eer_dict['imdb_wiki'])+ '\n\n')
         file.write('****AR:****')
-        file.write('\n\nCross-Modal (ID): \n Periocular Gallery - ' + str(cm_id_dict_p['ar']) + ', \n Face Gallery - ' + str(cm_id_dict_f['ar']))  
-        file.write('\n\nCross-Modal (Ver): ' + str(cm_eer_dict['ar']) + '\n\n\n')
-        file.write('\n\nCross-Modal (ID): \n Periocular Gallery - ' + str(cm_id_dict_p['ar']) + ', \n Face Gallery - ' + str(cm_id_dict_f['ar']))  
-        file.write('\n\nCross-Modal (Ver): ' + str(cm_eer_dict['ar']) + '\n\n\n')
+        file.write('\nFinal Rank-1 IR (Periocular): ' + str(peri_id_dict['ar']) + '\nFinal Rank-1 IR (Face): ' + str(face_id_dict['ar']))
+        file.write('\nFinal Rank-1 IR (Cross-Modal): \n Periocular Gallery - ' + str(cm_id_dict_p['ar']) + ', \n Face Gallery - ' + str(cm_id_dict_f['ar'])+ '\n\n')
+        file.write('\nFinal EER (Periocular): ' + str(peri_eer_dict['ar']) + '\nFinal EER (Face): ' + str(face_eer_dict['ar']))        
+        file.write('\nFinal EER (Cross-Modal): ' + str(cm_eer_dict['ar'])+ '\n\n') 
 
-        file.write('\n\n\n **** Average **** \n\n\n')
-        file.write('\n\nCross-Modal (ID): \n Periocular Gallery - ' + str(avg_cm_p_ir['avg']) + ', \n Face Gallery - ' + str(avg_cm_f_ir['avg']))      
-        file.write('\n\nCross-Modal (Ver): ' + str(avg_cm_eer['avg']) + '\n\n\n')
-        file.write('\n\nCross-Modal (ID): \n Periocular Gallery - ' + str(avg_cm_p_ir['avg']) + ', \n Face Gallery - ' + str(avg_cm_f_ir['avg']))      
-        file.write('\n\nCross-Modal (Ver): ' + str(avg_cm_eer['avg']) + '\n\n\n')
+
+        file.write('\n\n **** Average **** \n\n')
+        file.write('\nFinal Rank-1 IR (Periocular): ' + str(avg_peri_ir['avg']) + ' ± ' + str(avg_peri_ir['std']) \
+                   + '\nFinal Rank-1 IR (Face): ' + str(avg_face_ir['avg']) + ' ± ' + str(avg_face_ir['std']) )
+        file.write('\nFinal Rank-1 IR (Cross-Modal): \n Periocular Gallery - ' + str(avg_cm_p_ir['avg']) + ' ± ' + str(avg_cm_p_ir['std'])  \
+                   + ', \n Face Gallery - ' + str(avg_cm_f_ir['avg']) + ' ± ' + str(avg_cm_f_ir['std'])  + '\n\n')
+        file.write('\nFinal EER (Periocular): ' + str(avg_peri_eer['avg']) + ' ± ' + str(avg_peri_eer['std'])  \
+                   + '\nFinal EER (Face): ' + str(avg_face_eer['avg']) + ' ± ' + str(avg_face_eer['std']) )        
+        file.write('\nFinal EER (Cross-Modal): ' + str(avg_cm_eer['avg']) + ' ± ' + str(avg_cm_eer['std'])  + '\n\n')
         file.close()
 
     # *** ***

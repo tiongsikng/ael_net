@@ -1,5 +1,3 @@
-import sys, os
-sys.path.insert(0, os.path.abspath('.'))
 import numpy as np
 import torch
 from torch.utils.data import DataLoader, SubsetRandomSampler
@@ -7,8 +5,9 @@ from torchvision import datasets, transforms
 import random
 import cv2
 from torch.nn import functional as F
-
 from torch.utils.data.sampler import BatchSampler
+import sys, os
+sys.path.insert(0, os.path.abspath('.'))
 from configs.params import batch_sub, batch_samp, seed, device, random_batch_size, test_batch_size
 
 #### Data loader for network ####
@@ -22,6 +21,7 @@ torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 # print('Running on device: {}'.format(device))
 
+
 class ConcatDataset(torch.utils.data.Dataset):
     def __init__(self, *datasets):
         self.datasets = datasets
@@ -31,6 +31,7 @@ class ConcatDataset(torch.utils.data.Dataset):
 
     def __len__(self):
         return min(len(d) for d in self.datasets)
+    
 
 class BalancedBatchSampler(BatchSampler):
     
@@ -76,6 +77,7 @@ class BalancedBatchSampler(BatchSampler):
 
     def __len__(self):
         return self.n_dataset // self.batch_size
+    
 
 def ConvertRGB2BGR(x):
     x = np.float32(x)
@@ -85,6 +87,7 @@ def ConvertRGB2BGR(x):
 def FixedImageStandard(x):
     x = (x - 127.5) * 0.0078125
     return x
+
 
 def gen_data(path_dir, mode, type='periocular', aug='False'):
     if mode == 'test' and aug == 'True':

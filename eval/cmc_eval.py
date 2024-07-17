@@ -1,15 +1,15 @@
-import os, glob, sys
-sys.path.insert(0, os.path.abspath('.'))
+import copy
+from sklearn.metrics import pairwise
 import numpy as np
 import torch
-import network.ael_net as net
 from sklearn.model_selection import KFold
 from torch.nn import functional as F
 import time
 import matplotlib.pyplot as plt
+import os, glob, sys
+sys.path.insert(0, os.path.abspath('.'))
+import network.ael_net as net
 from network import load_model
-import copy
-from sklearn.metrics import pairwise
 from configs import datasets_config as config
 from data import data_loader
 
@@ -18,6 +18,8 @@ torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 torch.multiprocessing.set_sharing_strategy('file_system')
 
+cmc_dict = {}
+cmc_avg_dict = {}
 cm_cmc_dict_p = {}
 cm_cmc_avg_dict_p = {}
 cm_cmc_dict_f = {}
@@ -25,22 +27,31 @@ cm_cmc_avg_dict_f = {}
 dset_list = ['ethnic', 'pubfig', 'facescrub', 'imdb_wiki', 'ar']
 dset_name = ['Ethnic', 'Pubfig', 'FaceScrub', 'IMDb Wiki', 'AR']
 
+
 def create_folder(method):
-    lists = ['cm']
+    lists = ['peri', 'face', 'cm']
     boiler_path = './data/cmc/'
     for modal in lists:
         if not os.path.exists(os.path.join(boiler_path, method, modal)):
             os.makedirs(os.path.join(boiler_path, method, modal))
 
+
 def get_avg(dict_list):
-    total_eer = 0
+    total_ir = 0
+    ir_list = []
+    if 'avg' in dict_list.keys():
+        del dict_list['avg']
+    if 'std' in dict_list.keys():
+        del dict_list['std']
     for items in dict_list:
-        total_eer += dict_list[items]
-    dict_list['avg'] = total_eer/len(dict_list)
+        total_ir += dict_list[items]
+    dict_list['avg'] = total_ir/len(dict_list)
+    dict_list['std'] = np.std(np.array(ir_list)) * 100
 
     return dict_list
 
-def feature_extractor(model, data_loader, device = 'cuda:0', peri_flag = False, proto_flag = False):    
+
+def feature_extractor(model, data_loader, device='cuda:0', peri_flag=False):    
     emb = torch.tensor([])
     lbl = torch.tensor([], dtype = torch.int64)
 
@@ -57,30 +68,6 @@ def feature_extractor(model, data_loader, device = 'cuda:0', peri_flag = False, 
             del x, y
             time.sleep(0.0001)
 
-    if proto_flag is True:
-        lbl_proto = torch.tensor([], dtype = torch.int64)
-        emb_proto = torch.tensor([])
-
-        # get unique labels
-        for i in torch.unique(lbl):
-            # append unique labels to tensor list
-            lbl_proto = torch.cat((lbl_proto, torch.tensor([i], dtype=torch.int64)))
-
-            # get index list where unique labels occur
-            indices = np.where(lbl == i)
-            feats = torch.tensor([])
-
-            # from index list, append features into temporary feats list
-            for j in indices:
-                feats = torch.cat((feats, emb[j].detach().cpu()), 0)
-            # print(feats.shape)
-            # get mean of full feats list, and then unsqueeze to append the average prototype value into gal_fea_proto
-            proto_mean = torch.unsqueeze(torch.mean(feats, 0), 0)
-            proto_mean = F.normalize(proto_mean, p=2, dim=1)
-            emb_proto = torch.cat((emb_proto, proto_mean.detach().cpu()), 0)
-    
-        emb, lbl = emb_proto, lbl_proto
-
     # print('Set Capacity\t: ', emb.size())
     assert(emb.size()[0] == lbl.size()[0])
     
@@ -90,6 +77,7 @@ def feature_extractor(model, data_loader, device = 'cuda:0', peri_flag = False, 
     del model
     
     return emb, lbl
+
 
 def calculate_cmc(gallery_embedding, probe_embedding, gallery_label, probe_label, last_rank=10):
     """
@@ -130,6 +118,60 @@ def calculate_cmc(gallery_embedding, probe_embedding, gallery_label, probe_label
     return x_range, cmc.numpy()
 
 
+#### Intra-Modal CMC
+def im_cmc_extractor(model, peri_flag=True, root_pth=config.evaluation['identification'], device = 'cuda:0', rank=10):
+    total_cmc = np.empty((0, rank), int) 
+    modal = 'peri' if peri_flag == True else 'face'
+
+    for datasets in dset_list:
+        cmc_lst = np.empty((0, rank), int)
+        root_drt = root_pth + datasets + '/**'     
+        data_loaders = []
+        data_sets = []              
+
+        # data loader and datasets
+        if not datasets in ['ethnic']:
+            for directs in glob.glob(root_drt):
+                base_nm = directs.split('/')[-1]
+                if base_nm == 'gallery':
+                    data_load_gal, data_set_gal = data_loader.gen_data(directs + '/peri/', 'test', type=modal, aug='False')
+                else:
+                    data_load, data_set = data_loader.gen_data(directs + '/peri/', 'test', type=modal, aug='False')
+                    data_loaders.append(data_load)
+                    data_sets.append(data_set)
+        # print(datasets)
+        # *** ***
+        if datasets == 'ethnic':
+            ethnic_gal_data_load, ethnic_gal_data_set = data_loader.gen_data((root_pth + 'ethnic/Recognition/gallery/' + modal[:4] + '/'), 'test', type=modal, aug='False')
+            ethnic_pr_data_load, ethnic_pr_data_set = data_loader.gen_data((root_pth + 'ethnic/Recognition/probe/' + modal[:4] + '/'), 'test', type=modal, aug='False')
+            ethnic_fea_gal, ethnic_lbl_gal = feature_extractor(model, ethnic_gal_data_load, device = device, peri_flag = True)
+            ethnic_fea_pr, ethnic_lbl_pr = feature_extractor(model, ethnic_pr_data_load, device = device, peri_flag = True)            
+            ethnic_lbl_pr, ethnic_lbl_gal = F.one_hot(ethnic_lbl_pr), F.one_hot(ethnic_lbl_gal)
+
+            rng, cmc = calculate_cmc(ethnic_fea_gal, ethnic_fea_pr, ethnic_lbl_gal, ethnic_lbl_pr, last_rank=rank)
+
+        else:            
+            for probes in data_loaders:                
+                fea_gal, lbl_gal = feature_extractor(model, data_load_gal, device = device, peri_flag = peri_flag)
+                fea_pr, lbl_pr = feature_extractor(model, probes, device = device, peri_flag = peri_flag)
+                lbl_pr, lbl_gal = F.one_hot(lbl_pr), F.one_hot(lbl_gal)
+
+                rng, cmc = calculate_cmc(fea_gal, fea_pr, lbl_gal, lbl_pr, last_rank=rank)
+                cmc_lst = np.append(cmc_lst, np.array([cmc]), axis=0)
+                
+            cmc = np.mean(cmc_lst, axis=0)
+
+        cmc_dict[datasets] = cmc
+        print(datasets)        
+
+    for ds in cmc_dict:
+        total_cmc = np.append(total_cmc, np.array([cmc_dict[ds]]), axis=0)
+    cmc_avg_dict['avg'] = np.mean(total_cmc, axis = 0)
+
+    return cmc_dict, cmc_avg_dict
+
+
+#### Cross-Modal CMC
 def cm_cmc_extractor(model, root_pth=config.evaluation['identification'], facenet = None, perinet = None, device = 'cuda:0', rank=10):
     if facenet is None and perinet is None:
         facenet = model
@@ -212,7 +254,7 @@ def cm_cmc_extractor(model, root_pth=config.evaluation['identification'], facene
         total_cmc_p = np.append(total_cmc_p, np.array([cm_cmc_dict_p[ds]]), axis=0)
     cm_cmc_avg_dict_p['avg'] = np.mean(total_cmc_p, axis = 0)
 
-    return cm_cmc_dict_f, cm_cmc_avg_dict_f, cm_cmc_dict_p, cm_cmc_avg_dict_p
+    return cm_cmc_dict_p, cm_cmc_avg_dict_p, cm_cmc_dict_f, cm_cmc_avg_dict_f
 
 
 if __name__ == '__main__':
@@ -221,19 +263,39 @@ if __name__ == '__main__':
     rng = np.arange(0, rank)+1
     create_folder(method)
     embd_dim = 1024
-    device = torch.device('cuda:1' if torch.cuda.is_available() else 'cpu')
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
     load_model_path = './models/sota/AELNet.pth'
     model = net.AEL_Net(embedding_size = embd_dim, do_prob=0.0).eval().to(device)
     model = load_model.load_pretrained_network(model, load_model_path, device = device)
 
-    cm_cmc_dict_f, cm_avg_dict_f, cm_cmc_dict_p, cm_avg_dict_p = cm_cmc_extractor(model, facenet = None, perinet = None, root_pth=config.evaluation['identification'], device = device, rank=rank)
-    cm_cmc_dict_f = copy.deepcopy(cm_cmc_dict_f)
-    cm_avg_dict_f = copy.deepcopy(cm_avg_dict_f)
+    peri_cmc_dict, peri_avg_dict = im_cmc_extractor(model, peri_flag=True, root_pth=config.evaluation['identification'], device=device, rank=rank)
+    peri_cmc_dict = copy.deepcopy(peri_cmc_dict)
+    peri_avg_dict = copy.deepcopy(peri_avg_dict)
+    torch.save(peri_cmc_dict, './data/cmc/' + str(method) + '/peri/peri_cmc_dict.pt')
+    torch.save(peri_avg_dict, './data/cmc/' + str(method) + '/peri/peri_avg_dict.pt')
+    peri_cmc_dict = get_avg(peri_cmc_dict)
+    print('Average IR (Intra-Modal Periocular): \n', peri_cmc_dict['avg'], '±', peri_cmc_dict['std'])
+
+    face_cmc_dict, face_avg_dict = im_cmc_extractor(model, peri_flag=False, root_pth=config.evaluation['identification'], device=device, rank=rank)
+    face_cmc_dict = copy.deepcopy(face_cmc_dict)
+    face_avg_dict = copy.deepcopy(face_avg_dict)
+    torch.save(face_cmc_dict, './data/cmc/' + str(method) + '/face/face_cmc_dict.pt')
+    torch.save(face_avg_dict, './data/cmc/' + str(method) + '/face/face_avg_dict.pt')
+    face_cmc_dict = get_avg(face_cmc_dict)
+    print('Average IR (Intra-Modal Face): \n', face_cmc_dict['avg'], '±', face_cmc_dict['std'])
+
+    cm_cmc_dict_p, cm_avg_dict_p, cm_cmc_dict_f, cm_avg_dict_f = cm_cmc_extractor(model, facenet=None, perinet=None, root_pth=config.evaluation['identification'], device=device, rank=rank)
     cm_cmc_dict_p = copy.deepcopy(cm_cmc_dict_p)
     cm_avg_dict_p = copy.deepcopy(cm_avg_dict_p)
-    torch.save(cm_cmc_dict_f, './data/cmc/' + str(method) + '/cm/cm_cmc_dict_f.pt')
-    torch.save(cm_avg_dict_f, './data/cmc/' + str(method) + '/cm/cm_avg_dict_f.pt')
+    cm_cmc_dict_f = copy.deepcopy(cm_cmc_dict_f)
+    cm_avg_dict_f = copy.deepcopy(cm_avg_dict_f)
     torch.save(cm_cmc_dict_p, './data/cmc/' + str(method) + '/cm/cm_cmc_dict_p.pt')
     torch.save(cm_avg_dict_p, './data/cmc/' + str(method) + '/cm/cm_avg_dict_p.pt')
-    print('CMC:', cm_cmc_dict_f, cm_cmc_dict_p)
+    torch.save(cm_cmc_dict_f, './data/cmc/' + str(method) + '/cm/cm_cmc_dict_f.pt')
+    torch.save(cm_avg_dict_f, './data/cmc/' + str(method) + '/cm/cm_avg_dict_f.pt')    
+    cm_cmc_dict_p = get_avg(cm_cmc_dict_p)
+    cm_cmc_dict_f = get_avg(cm_cmc_dict_f)    
+    print('Average IR (Cross-Modal Periocular): \n', cm_cmc_dict_p['avg'], '±', cm_cmc_dict_p['std'])
+    print('Average IR (Cross-Modal Face): \n', cm_cmc_dict_f['avg'], '±', cm_cmc_dict_f['std'])
+    
