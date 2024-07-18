@@ -4,7 +4,7 @@ seed = 42
 save = True
 write_log = True
 method = 'HA-ViT'
-remarks = 'Reproduce_LargeMargin'
+remarks = ''
 dim = 1024
 
 # Other hyperparameters

@@ -45,6 +45,7 @@ def get_avg(dict_list):
         del dict_list['std']
     for items in dict_list:
         total_ir += dict_list[items]
+        ir_list.append(dict_list[items])
     dict_list['avg'] = total_ir/len(dict_list)
     dict_list['std'] = np.std(np.array(ir_list)) * 100
 
@@ -162,7 +163,7 @@ def im_cmc_extractor(model, peri_flag=True, root_pth=config.evaluation['identifi
             cmc = np.mean(cmc_lst, axis=0)
 
         cmc_dict[datasets] = cmc
-        print(datasets)        
+        # print(datasets) 
 
     for ds in cmc_dict:
         total_cmc = np.append(total_cmc, np.array([cmc_dict[ds]]), axis=0)
@@ -242,9 +243,9 @@ def cm_cmc_extractor(model, root_pth=config.evaluation['identification'], facene
 
         cm_cmc_dict_p[datasets] = cmc_p
         cm_cmc_dict_f[datasets] = cmc_f
-        print(datasets)
-        print('Peri Gallery:', cmc_p)        
-        print('Face Gallery:', cmc_f)        
+        # print(datasets)
+        # print('Peri Gallery:', cmc_p)        
+        # print('Face Gallery:', cmc_f)        
 
     for ds in cm_cmc_dict_f:
         total_cmc_f = np.append(total_cmc_f, np.array([cm_cmc_dict_f[ds]]), axis=0)
@@ -265,7 +266,7 @@ if __name__ == '__main__':
     embd_dim = 1024
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-    load_model_path = './models/sota/AELNet.pth'
+    load_model_path = './models/best_model/AELNet.pth'
     model = net.AEL_Net(embedding_size = embd_dim, do_prob=0.0).eval().to(device)
     model = load_model.load_pretrained_network(model, load_model_path, device = device)
 

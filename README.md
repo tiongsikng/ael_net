@@ -26,7 +26,7 @@ The project directories are as follows:
     * _Trained models will also be stored in this directory._
 - network: Contains loss functions and network related files.
     * `facexzoo_network` - Directory contains architecture files from FaceXZoo.
-    * `SOTA` - Directory contains architecture files that are used for State-of-the-Art (SOTA) comparison, namely HA-ViT and CMB-Net. _Since HA-ViT has its own data loader and has a slightly different setting, the `HA_ViT` directory contains its own data loader and evaluation files for simplicity._
+    * `SOTA` - Directory contains architecture files that are used for State-of-the-Art (SOTA) comparison, namely MFA-ViT, HA-ViT, and CMB-Net. _Since MFA-ViT and HA-ViT has their own data loader and has a slightly different setting, the `MFA-ViT` or `HA_ViT` directoriess contain their own data loader and evaluation files for simplicity._
     * ael_net.py - Architecture file for AELNet.
     * load_model.py - Loads pre-trained weights based on a given model.
     * logits.py - Contains some loss functions that are used.
@@ -35,7 +35,7 @@ The project directories are as follows:
     * train.py - Training file that is called from `main.py`. Gets batch of dataloader and contains criterion for loss back-propagation.
 
 ### Pre-requisites (requirements):
-Check `environment.yml` file, which was generated using `conda env export > environment.yml --no-builds` command. Else, check `requirements.txt` file which was generated using `pip list --format=freeze > requirements.txt` command. These files are not filtered, so there may be redundant packages.
+Check `requirements.txt` file which was generated using `pip list --format=freeze > requirements.txt` command. These files are partially filtered manually, so there may be redundant packages.
 Download dataset (training and testing) from [this link](https://www.dropbox.com/s/bfub8fmc44tvcxb/periocular_face_dataset.zip?dl=0). Password is _conditional\_biometrics_.
 
 ### Training:
@@ -57,6 +57,8 @@ Download dataset (training and testing) from [this link](https://www.dropbox.com
 
 | Method | Rank-1 IR (%) <br> (Periocular Gallery) | Rank-1 IR (%) <br> (Face Gallery) | EER (%) <br> (Periocular-Face) |
 | --- | --- | --- | --- |
-| [CMB-Net](https://www.dropbox.com/s/apbejkd082dn0tp/CMB-Net.pth?dl=0) | 77.26 | 68.22 | 9.80 |
-| [HA-ViT](https://www.dropbox.com/s/hzmsz7kuyvyrf75/HA-ViT.pth?dl=0) | 64.72 | 64.01 | 13.14 |
+| [CB-Net](https://www.dropbox.com/scl/fi/s00q4vhs0sqb3wybl7gft/CB-Net.pth?rlkey=aczpmgt27cyms78s0vxlc8zqm&st=ahjr50d5&dl=0) | 77.26 | 68.22 | 9.80 |
+| [HA-ViT](https://www.dropbox.com/scl/fi/954fltr100zvwjyyl9fn5/HA-ViT.pth?rlkey=pip3eydsib2o11uefhluhoy2e&st=8irhf1ew&dl=0) | 64.72 | 64.01 | 13.14 |
+| [GC<sup>2</sup>SA-Net](https://www.dropbox.com/scl/fi/wl0yut0fr7rvgpp4d3izx/GC2SA-Net.pth?rlkey=ui9feg6ty5ip4ebkds9ggiflm&st=g2l20tso&dl=0) | 90.77 | 88.93 | 6.50 |
+| [MFA-ViT](https://www.dropbox.com/scl/fi/ate7icoe714pw3592mtmm/MFA-ViT.pth?rlkey=oa2iapqlwomwivqzppzftl8ff&st=wc8iwepz&dl=0) | 89.34 | 85.35 | 9.41 |
 | [AELNet](https://www.dropbox.com/scl/fo/j90nx00akg0bkp0dr7a6w/h?dl=0&rlkey=1k8eae7r7lbt326kzobgy88fl) | 92.47 | 90.71 | 6.31 |

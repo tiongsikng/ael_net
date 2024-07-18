@@ -250,7 +250,7 @@ if __name__ == '__main__':
     embd_dim = 1024
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu') 
 
-    load_model_path = './models/sota/AELNet.pth'
+    load_model_path = './models/best_model/AELNet.pth'
     model = net.AEL_Net(embedding_size = embd_dim, do_prob=0.0).eval().to(device)    
     model = load_model.load_pretrained_network(model, load_model_path, device = device)
 

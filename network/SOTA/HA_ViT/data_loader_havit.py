@@ -9,7 +9,7 @@ import cv2
 from torch.nn import functional as F
 
 from torch.utils.data.sampler import BatchSampler
-from params_havit import batch_sub, batch_samp, batch_size, seed, device, random_batch_size, test_batch_size
+from params_havit import batch_sub, batch_samp, seed, device, random_batch_size, test_batch_size
 
 #### Data loader for network ####
 device = device
@@ -22,6 +22,7 @@ torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 # print('Running on device: {}'.format(device))
 
+
 class ConcatDataset(torch.utils.data.Dataset):
     def __init__(self, *datasets):
         self.datasets = datasets
@@ -31,6 +32,7 @@ class ConcatDataset(torch.utils.data.Dataset):
 
     def __len__(self):
         return min(len(d) for d in self.datasets)
+    
 
 class BalancedBatchSampler(BatchSampler):
     
@@ -76,6 +78,7 @@ class BalancedBatchSampler(BatchSampler):
 
     def __len__(self):
         return self.n_dataset // self.batch_size
+    
 
 def ConvertRGB2BGR(x):
     x = np.float32(x)
@@ -85,6 +88,7 @@ def ConvertRGB2BGR(x):
 def FixedImageStandard(x):
     x = (x - 127.5) * 0.0078125
     return x
+
 
 def gen_data(path_dir, mode, type='periocular', aug='False'):
     if mode == 'test' and aug == 'True':
@@ -129,46 +133,3 @@ def gen_data(path_dir, mode, type='periocular', aug='False'):
                                                 num_workers = 6, worker_init_fn = random.seed(seed))
     
     return data_loader, data_set
-
-# def gen_data(path_dir, mode, type='periocular', aug='False'):
-#     if mode == 'test' and aug == 'True':
-#         raise('Testing dataset has augmentation!')
-#     if type == 'face':
-#         sz = (112, 112)
-#     elif type == 'periocular' or type == 'peri':
-#         sz = (112, 112) #(37, 112) (48, 128) #
-    
-#     data_trans = transforms.Compose( [ transforms.Resize(sz),
-#                                      transforms.ToTensor(),
-#                                      transforms.Normalize([0.5,0.5,0.5], [0.5,0.5,0.5])
-#                                     ] )
-#     aug_trans = transforms.Compose( [ transforms.RandomAffine(degrees=10, translate=None, scale=(1.0,1.2),
-#                                                                     shear=0),
-#                                     transforms.Resize(sz), 
-#                                     transforms.RandomHorizontalFlip(p=0.8), 
-#                                     transforms.ToTensor(),
-#                                     transforms.Normalize([0.5,0.5,0.5], [0.5,0.5,0.5]),
-#                                     ] )
-        
-#     data_set = datasets.ImageFolder(path_dir, transform = data_trans)        
-#     data_sampler = BalancedBatchSampler(data_set.targets, n_classes = batch_sub, n_samples = batch_samp)
-#     if aug == 'True':
-#         data_set_aug = datasets.ImageFolder(path_dir, transform = aug_trans)
-#         data_sets = ConcatDataset(data_set, data_set_aug)
-#     else:
-#         data_sets = data_set
-
-#     if mode == 'train':
-#         data_loader = torch.utils.data.DataLoader(data_sets, batch_sampler = data_sampler, num_workers = 4,
-#                                               worker_init_fn = random.seed(seed))
-#     elif mode == 'train_rand':
-#         data_loader = torch.utils.data.DataLoader(data_sets, batch_size = batch_size, num_workers = 4,
-#                                               worker_init_fn = random.seed(seed), shuffle = True, drop_last = True)
-#     elif mode == 'test' and aug == 'False':
-#         data_loader = torch.utils.data.DataLoader( data_sets, batch_size = batch_size*4, shuffle = False, 
-#                                                 num_workers = 6, worker_init_fn = random.seed(seed))
-    
-#     return data_loader, data_set
-
-if __name__ == '__main__':
-    print('gdd')

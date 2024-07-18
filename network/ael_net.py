@@ -142,16 +142,12 @@ class AEL_Net(Module):
         self.encoder_64_1 = AEL_Block(channels=64, num_heads=8, expansion_factor=2.66)
         self.encoder_64_2 = AEL_Block(channels=64, num_heads=8, expansion_factor=2.66)
         self.encoder_ori = AEL_Block(channels=128, num_heads=8, expansion_factor=2.66)
-        self.conv_6_sep = Conv_block(128, 512, kernel=(1, 1), stride=(1, 1), padding=(0, 0))
-        
+        self.conv_6_sep = Conv_block(128, 512, kernel=(1, 1), stride=(1, 1), padding=(0, 0))        
         self.conv_6_dw = Linear_block(512, 512, groups=512, kernel=(out_h, out_w), stride=(1, 1), padding=(0, 0))
-
         self.conv_6_flatten = Flatten()
         self.linear = Linear(512, embedding_size, bias=False)
         self.bn = BatchNorm1d(embedding_size)
-
         self.dropout = Dropout(do_prob)
-
     
     def forward(self, x, peri_flag = False):
         out = self.conv1(x)
@@ -166,7 +162,6 @@ class AEL_Net(Module):
         out = self.conv_45(out)
         out = self.conv_5(out)
         out = self.conv_6_sep(out)
-
         emb = self.conv_6_dw(out)
         emb = self.conv_6_flatten(emb)
         emb = self.dropout(emb)
