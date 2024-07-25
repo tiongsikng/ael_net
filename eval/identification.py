@@ -38,120 +38,6 @@ def get_avg(dict_list):
     return dict_list
 
 
-#### Intra-Modal Identification (Main)
-def im_id_main(model, peri_flag=True, root_pth=config.evaluation['identification'], device='cuda:0'):
-    modal = 'peri' if peri_flag == True else 'face'
-    for datasets in dset_list:
-        root_drt = root_pth + datasets + '/**'        
-        modal_root = '/' + modal[:4] + '/'
-        probe_data_loaders = []
-        probe_data_sets = []
-        acc = []        
-
-        # data loader and datasets
-        for directs in glob.glob(root_drt):
-            base_nm = directs.split('\\')[-1]
-            modal_base = directs + modal_root
-            if not datasets in ['ethnic']:
-                if modal_base.split('/')[-3] != 'gallery':
-                    data_load, data_set = data_loader.gen_data(modal_base, 'test', type=modal, aug='False')
-                    probe_data_loaders.append(data_load)
-                    probe_data_sets.append(data_set)
-                else: 
-                    data_load, data_set = data_loader.gen_data(modal_base, 'test', type=modal, aug='False')
-                    gallery_data_loaders, gallery_data_sets = data_load, data_set
-
-        # *** ***
-
-        if datasets == 'ethnic':
-            ethnic_gal_data_load, ethnic_gal_data_set = data_loader.gen_data((root_pth + 'ethnic/Recognition/gallery/' + modal[:4] + '/'), 'test', type=modal, aug='False')
-            ethnic_pr_data_load, ethnic_pr_data_set = data_loader.gen_data((root_pth + 'ethnic/Recognition/probe/' + modal[:4] + '/'), 'test', type=modal, aug='False')
-            acc = intramodal_id(model, ethnic_gal_data_load, ethnic_pr_data_load, device=device, peri_flag=peri_flag)
-        else:
-                for i in range(len(probe_data_loaders)):
-                    test_acc = intramodal_id(model, gallery_data_loaders, probe_data_loaders[i], device=device, peri_flag=peri_flag)
-                    test_acc = np.around(test_acc, 4)
-                    acc.append(test_acc)
-
-        # *** ***
-
-        acc = np.around(np.mean(acc), 4)
-        print(datasets, acc)
-        id_dict[datasets] = acc
-
-    return id_dict
-
-
-#### Intra-Modal Identification
-def intramodal_id(model, gal_loader, probe_loader, device='cuda:0', peri_flag=True):
-    
-    # ***** *****    
-    model = model.eval().to(device)
-    # ***** *****
-
-    gal_fea = torch.tensor([])
-    gal_label = torch.tensor([], dtype = torch.int64)
-    
-    with torch.no_grad():
-        
-        for batch_idx, (x, y) in enumerate(gal_loader):
-            
-            x = x.to(device)
-            x = model(x, peri_flag=peri_flag)
-
-            gal_fea = torch.cat((gal_fea, x.detach().cpu()), 0)
-            gal_label = torch.cat((gal_label, y))
-            
-            del x, y
-            time.sleep(0.0001)
-    
-    assert(gal_fea.size()[0] == gal_label.size()[0])
-    
-    del gal_loader
-    time.sleep(0.0001)
-
-    # *****    
-    probe_fea = torch.tensor([])
-    probe_label = torch.tensor([], dtype = torch.int64)
-    
-    with torch.no_grad():
-        
-        for batch_idx, (x, y) in enumerate(probe_loader):
-
-            x = x.to(device)
-            x = model(x, peri_flag=peri_flag)
-
-            probe_fea = torch.cat((probe_fea, x.detach().cpu()), 0)
-            probe_label = torch.cat((probe_label, y))
-            
-            del x, y
-            time.sleep(0.0001)
-
-    assert(probe_fea.size()[0] == probe_label.size()[0])
-    
-    del probe_loader
-    time.sleep(0.0001)
-    
-    # ***** *****
-    # normalize features
-    gal_fea = F.normalize(gal_fea, p=2, dim=1)
-    probe_fea = F.normalize(probe_fea, p=2, dim=1)
-
-    # Calculate gallery_acc and test_acc
-    gal_label = np.reshape(np.array(gal_label), -1)
-    probe_label = np.reshape(np.array(probe_label), -1)    
-    
-    probe_dist = pairwise.cosine_similarity(gal_fea, probe_fea)
-    probe_pred = np.argmax(probe_dist, 0)
-    probe_pred = gal_label[probe_pred]
-    probe_acc = sum(probe_label == probe_pred) / probe_label.shape[0]
-    
-    del model
-    time.sleep(0.0001)
-    
-    return probe_acc
-
-
 #### Cross-Modal Identification (Main)
 def cm_id_main(model, root_pth=config.evaluation['identification'], face_model=None, peri_model=None, device='cuda:0'):
     for datasets in dset_list:
@@ -307,16 +193,6 @@ if __name__ == '__main__':
     load_model_path = './models/best_model/AELNet.pth'
     model = net.AEL_Net(embedding_size = embd_dim, do_prob=0.0).eval().to(device)
     model = load_model.load_pretrained_network(model, load_model_path, device = device)
-
-    peri_id_dict = im_id_main(model, peri_flag=True, root_pth=config.evaluation['identification'], device=device)
-    peri_id_dict = get_avg(peri_id_dict)
-    peri_id_dict = copy.deepcopy(peri_id_dict)
-    print('Average IR (Intra-Modal Periocular): \n', peri_id_dict['avg'], '±', peri_id_dict['std'])
-
-    face_id_dict = im_id_main(model, peri_flag=True, root_pth=config.evaluation['identification'], device=device)
-    face_id_dict = get_avg(face_id_dict)
-    face_id_dict = copy.deepcopy(face_id_dict)
-    print('Average IR (Intra-Modal Face): \n', face_id_dict['avg'], '±', face_id_dict['std'])
 
     cm_id_dict_p, cm_id_dict_f = cm_id_main(model, root_pth=config.evaluation['identification'], face_model=None, peri_model=None, device=device)
     cm_id_dict_p, cm_id_dict_f = get_avg(cm_id_dict_p), get_avg(cm_id_dict_f)

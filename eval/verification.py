@@ -109,60 +109,6 @@ class dataset(data.Dataset):
         ocular = self.ocular_transform(ocular)
         onehot = self.onehot_label[idx]
         return ocular, onehot
-    
-    
-#### Intra Modal Verification
-def im_verify(model, emb_size = 1024, peri_flag=False,  root_drt=config.evaluation['verification'], device='cuda:0'):
-    modal = 'peri' if peri_flag == True else 'face'
-
-    for dset_name in dset_list:
-        embedding_size = emb_size       
-        
-        if dset_name == 'ethnic':
-            dset = dataset(dset=dset_name, dset_type='Verification/gallery', root_drt = root_drt, modal=modal)
-        else:
-            dset = dataset(dset=dset_name, dset_type='gallery', root_drt = root_drt, modal=modal)
-
-        dloader = torch.utils.data.DataLoader(dset, batch_size=batch_size, num_workers=4)
-        nof_dset = len(dset)
-        nof_iden = dset.nof_identity
-        embedding_mat = torch.zeros((nof_dset, embedding_size)).to(device)
-        label_mat = torch.zeros((nof_dset, nof_iden)).to(device)
-
-        model = model.eval().to(device)
-
-        with torch.no_grad():
-            for i, (ocular, onehot) in enumerate(dloader):
-                nof_img = ocular.shape[0]
-                ocular = ocular.to(device)
-                onehot = onehot.to(device)
-
-                feature = model(ocular, peri_flag = peri_flag)
-
-                embedding_mat[i*batch_size:i*batch_size+nof_img, :] = feature.detach().clone()                
-                label_mat[i*batch_size:i*batch_size+nof_img, :] = onehot
-
-            ### roc
-            embedding_mat /= torch.norm(embedding_mat, p=2, dim=1, keepdim=True)
-
-            score_mat = torch.matmul(embedding_mat, embedding_mat.t()).cpu()
-            gen_mat = torch.matmul(label_mat, label_mat.t()).cpu()
-            gen_r, gen_c = torch.where(gen_mat == 1)
-            imp_r, imp_c = torch.where(gen_mat == 0)
-
-            gen_score = score_mat[gen_r, gen_c].cpu().numpy()
-            imp_score = score_mat[imp_r, imp_c].cpu().numpy()
-
-            y_gen = np.ones(gen_score.shape[0])
-            y_imp = np.zeros(imp_score.shape[0])
-
-            score = np.concatenate((gen_score, imp_score))
-            y = np.concatenate((y_gen, y_imp))
-
-            fpr_tmp, tpr_tmp, _ = roc_curve(y, score)
-            eer_dict[dset_name] = compute_eer(fpr_tmp, tpr_tmp)
-
-    return eer_dict
 
 
 #### Cross-Modal Verification
@@ -253,16 +199,6 @@ if __name__ == '__main__':
     load_model_path = './models/best_model/AELNet.pth'
     model = net.AEL_Net(embedding_size = embd_dim, do_prob=0.0).eval().to(device)    
     model = load_model.load_pretrained_network(model, load_model_path, device = device)
-
-    peri_eer_dict = im_verify(model, emb_size=embd_dim, peri_flag=True, root_drt=config.evaluation['verification'], device=device)
-    peri_eer_dict = copy.deepcopy(peri_eer_dict)
-    peri_eer_dict = get_avg(peri_eer_dict)
-    print('Average EER (Intra-Modal Periocular):', peri_eer_dict['avg'], '±', peri_eer_dict['std'])
-
-    face_eer_dict = im_verify(model, emb_size=embd_dim, peri_flag=False, root_drt=config.evaluation['verification'], device=device)
-    face_eer_dict = copy.deepcopy(face_eer_dict)
-    face_eer_dict = get_avg(face_eer_dict)
-    print('Average EER (Intra-Modal Face):', face_eer_dict['avg'], '±', face_eer_dict['std'])
 
     cm_eer_dict = cm_verify(model, face_model=None, peri_model=None, emb_size=embd_dim, root_drt=config.evaluation['verification'], device=device)
     cm_eer_dict = copy.deepcopy(cm_eer_dict)

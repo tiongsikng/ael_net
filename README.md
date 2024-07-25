@@ -15,6 +15,7 @@ The project directories are as follows:
     * cmc_eval.py - Evaluates and generates Cumulative Matching Characteristic (CMC) curve, which are saved as `.pt` files in `data` directory. Use these `.pt` files to generate CMC curves.
     * identification.py - Evaluates Rank-1 Identification Rate (IR).
     * plot_cmc_roc_sota.ipynb - Notebook to plot CMC and ROC curves side-by-side, based on generated `.pt` files from `cmc_eval.py` and `roc_eval.py`. Graph is generated in `graphs` directory.
+    * plot_tSNE.ipynb - Notebook to plot t-SNE visualization. Graph is generated in `graphs` directory.
     * roc_eval.py - Evaluates and generates Receiver Operating Characteristic (ROC) curve, which are saved as `.pt` files in `data` directory. Use these `.pt` files to generate ROC curves.
     * verification.py - Evaluates Verification Equal Error Rate (EER).
 - graphs: Directory where graphs are generated.
@@ -26,7 +27,7 @@ The project directories are as follows:
     * _Trained models will also be stored in this directory._
 - network: Contains loss functions and network related files.
     * `facexzoo_network` - Directory contains architecture files from FaceXZoo.
-    * `SOTA` - Directory contains architecture files that are used for State-of-the-Art (SOTA) comparison, namely MFA-ViT, HA-ViT, and CMB-Net. _Since MFA-ViT and HA-ViT has their own data loader and has a slightly different setting, the `MFA-ViT` or `HA_ViT` directoriess contain their own data loader and evaluation files for simplicity._
+    * `SOTA` - Directory contains architecture files that are used for State-of-the-Art (SOTA) comparison, namely MFA-ViT, HA-ViT, and CMB-Net. _Since MFA-ViT and HA-ViT has their own data loader and has a slightly different setting, the `MFA-ViT` or `HA_ViT` directories contain their own data loader and evaluation files for simplicity._
     * ael_net.py - Architecture file for AELNet.
     * load_model.py - Loads pre-trained weights based on a given model.
     * logits.py - Contains some loss functions that are used.
