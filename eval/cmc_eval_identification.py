@@ -24,6 +24,9 @@ cm_cmc_dict_p = {}
 cm_cmc_avg_dict_p = {}
 cm_cmc_dict_f = {}
 cm_cmc_avg_dict_f = {}
+id_dict = {'ethnic' : 0, 'pubfig' : 0, 'facescrub': 0, 'imdb_wiki' : 0, 'ar' : 0}
+cm_id_dict_f = {'ethnic' : 0, 'pubfig' : 0, 'facescrub': 0, 'imdb_wiki' : 0, 'ar' : 0}
+cm_id_dict_p = {'ethnic' : 0, 'pubfig' : 0, 'facescrub': 0, 'imdb_wiki' : 0, 'ar' : 0}
 dset_list = ['ethnic', 'pubfig', 'facescrub', 'imdb_wiki', 'ar']
 dset_name = ['Ethnic', 'Pubfig', 'FaceScrub', 'IMDb Wiki', 'AR']
 
@@ -50,6 +53,154 @@ def get_avg(dict_list):
     dict_list['std'] = np.std(np.array(ir_list)) * 100
 
     return dict_list
+
+
+#### Cross-Modal Identification (Main)
+def cm_id_main(model, root_pth=config.evaluation['identification'], face_model=None, peri_model=None, device='cuda:0'):
+    for datasets in dset_list:
+
+        root_drt = root_pth + datasets + '/**'
+        modal_root = ['/peri/', '/face/']
+        path_lst = []
+        data_loaders = []
+        acc_face_gal = []
+        acc_peri_gal = []    
+
+        # *** ***
+
+        if datasets == 'ethnic':
+            ethnic_face_gal_load, ethnic_gal_data_set = data_loader.gen_data((root_pth + 'ethnic/Recognition/gallery/face/'), 'test', 'face', aug='False')
+            ethnic_peri_pr_load, ethnic_pr_data_set = data_loader.gen_data((root_pth + 'ethnic/Recognition/probe/peri/'), 'test', 'periocular', aug='False')
+            acc_face_gal = crossmodal_id(model, ethnic_face_gal_load, ethnic_peri_pr_load, device=device, face_model=face_model, peri_model=peri_model, gallery='face')
+
+            ethnic_peri_gal_load, ethnic_gal_data_set = data_loader.gen_data((root_pth + 'ethnic/Recognition/gallery/peri/'), 'test', 'periocular', aug='False')
+            ethnic_face_pr_load, ethnic_pr_data_set = data_loader.gen_data((root_pth + 'ethnic/Recognition/probe/face/'), 'test', 'face', aug='False')
+            acc_peri_gal = crossmodal_id(model, ethnic_face_pr_load, ethnic_peri_gal_load, device=device, face_model=face_model, peri_model=peri_model, gallery='peri')
+        else:
+            # data loader and datasets
+            for directs in glob.glob(root_drt):
+                base_nm = directs.split('\\')[-1]
+                if not directs.split('/')[-1] == 'gallery':
+                    path_lst.append(directs)
+                else:
+                    gallery_path = directs      
+
+            fold = 0
+            for probes in path_lst:
+                fold += 1
+                peri_probe_load, peri_dataset = data_loader.gen_data((probes + modal_root[0]), 'test', 'periocular', aug='False')
+                face_gal_load, face_dataset = data_loader.gen_data((gallery_path + modal_root[1]), 'test', 'face', aug='False')
+                cm_face_gal_acc = crossmodal_id(model, face_gal_load, peri_probe_load, device=device, face_model=face_model, peri_model = peri_model, gallery='face')
+                cm_face_gal_acc = np.around(cm_face_gal_acc, 4)
+                acc_face_gal.append(cm_face_gal_acc)
+
+                peri_gal_load, peri_dataset = data_loader.gen_data((gallery_path + modal_root[0]), 'test', 'periocular', aug='False')
+                face_probe_load, face_dataset = data_loader.gen_data((probes + modal_root[1]), 'test', 'face', aug='False')
+                cm_peri_gal_acc = crossmodal_id(model, face_probe_load, peri_gal_load, device=device, face_model=face_model, peri_model=peri_model, gallery='peri')
+                cm_peri_gal_acc = np.around(cm_peri_gal_acc, 4)
+                acc_peri_gal.append(cm_peri_gal_acc)
+
+        # *** ***
+
+        acc_peri_gal = np.around(np.mean(acc_peri_gal), 4)
+        acc_face_gal = np.around(np.mean(acc_face_gal), 4)        
+        print('Peri Gallery:', datasets, acc_peri_gal)
+        print('Face Gallery:', datasets, acc_face_gal) 
+        cm_id_dict_p[datasets] = acc_peri_gal       
+        cm_id_dict_f[datasets] = acc_face_gal        
+
+    return cm_id_dict_p, cm_id_dict_f
+
+
+#### Cross-Modal Identification. For baselines, input face_model and peri_model
+def crossmodal_id(model, face_loader, peri_loader, device='cuda:0', face_model=None, peri_model=None, gallery='face'):
+    
+    # ***** *****    
+    model = model.eval().to(device)
+    # ***** *****
+
+    # Extract face features w.r.t. pre-learned model
+    face_fea = torch.tensor([])
+    face_label = torch.tensor([], dtype = torch.int64)
+    
+    with torch.no_grad():
+        
+        for batch_idx, (x, y) in enumerate(face_loader):
+            
+            x = x.to(device)
+            if not face_model is None:
+                face_model = face_model.eval().to(device)
+                x = face_model(x, peri_flag=False)
+            else:
+                x = model(x, peri_flag=False)
+
+            face_fea = torch.cat((face_fea, x.detach().cpu()), 0)
+            face_label = torch.cat((face_label, y))
+            
+            del x, y
+            time.sleep(0.0001)
+    
+    # print('Test Set Capacity\t: ', test_fea.size())
+    assert(face_fea.size()[0] == face_label.size()[0])
+    
+    del face_loader
+    time.sleep(0.0001)
+
+    # *****    
+    
+    # Extract periocular features w.r.t. pre-learned model
+    peri_fea = torch.tensor([])
+    peri_label = torch.tensor([], dtype = torch.int64)
+    
+    with torch.no_grad():
+        
+        for batch_idx, (x, y) in enumerate(peri_loader):
+
+            x = x.to(device)
+            if not peri_model is None:
+                peri_model = peri_model.eval().to(device)
+                x = peri_model(x, peri_flag=True)
+            else:
+                x = model(x, peri_flag=True)
+
+            peri_fea = torch.cat((peri_fea, x.detach().cpu()), 0)
+            peri_label = torch.cat((peri_label, y))
+            
+            del x, y
+            time.sleep(0.0001)
+
+    # print('Gallery Set Capacity\t: ', gallery_fea.size())
+    assert(peri_fea.size()[0] == peri_label.size()[0])
+    
+    del peri_loader
+    time.sleep(0.0001)
+    
+    # ***** *****
+    # perform checking
+    if gallery == 'face':
+        gal_fea, gal_label = face_fea, face_label
+        probe_fea, probe_label = peri_fea, peri_label
+    elif gallery == 'peri':
+        gal_fea, gal_label = peri_fea, peri_label
+        probe_fea, probe_label = face_fea, face_label
+
+    # normalize features
+    gal_fea = F.normalize(gal_fea, p=2, dim=1)
+    probe_fea = F.normalize(probe_fea, p=2, dim=1)
+
+    # Calculate gallery_acc and test_acc
+    gal_label = np.reshape(np.array(gal_label), -1)
+    probe_label = np.reshape(np.array(probe_label), -1)    
+    
+    probe_dist = pairwise.cosine_similarity(gal_fea, probe_fea)
+    probe_pred = np.argmax(probe_dist, 0)
+    probe_pred = gal_label[probe_pred]
+    probe_acc = sum(probe_label == probe_pred) / probe_label.shape[0]
+    
+    del model
+    time.sleep(0.0001)
+    
+    return probe_acc
 
 
 def feature_extractor(model, data_loader, device='cuda:0', peri_flag=False):    
@@ -116,7 +267,7 @@ def calculate_cmc(gallery_embedding, probe_embedding, gallery_label, probe_label
 
     x_range = np.arange(0,last_rank)+1
 
-    return x_range, cmc.numpy()
+    return cmc.numpy()
 
 
 #### Cross-Modal CMC
@@ -165,8 +316,8 @@ def cm_cmc_extractor(model, root_pth=config.evaluation['identification'], facene
             f_ethnic_fea_pr, f_ethnic_lbl_pr = feature_extractor(facenet, f_ethnic_pr_data_load, device = device, peri_flag = False)            
             f_ethnic_lbl_pr, f_ethnic_lbl_gal = F.one_hot(f_ethnic_lbl_pr), F.one_hot(f_ethnic_lbl_gal)
 
-            rng_f, cmc_f = calculate_cmc(f_ethnic_fea_gal, p_ethnic_fea_pr, f_ethnic_lbl_gal, p_ethnic_lbl_pr, last_rank=rank)
-            rng_p, cmc_p = calculate_cmc(p_ethnic_fea_gal, f_ethnic_fea_pr, p_ethnic_lbl_gal, f_ethnic_lbl_pr, last_rank=rank)
+            cmc_f = calculate_cmc(f_ethnic_fea_gal, p_ethnic_fea_pr, f_ethnic_lbl_gal, p_ethnic_lbl_pr, last_rank=rank)
+            cmc_p = calculate_cmc(p_ethnic_fea_gal, f_ethnic_fea_pr, p_ethnic_lbl_gal, f_ethnic_lbl_pr, last_rank=rank)
 
         else:            
             for probes in peri_data_loaders:                
@@ -174,7 +325,7 @@ def cm_cmc_extractor(model, root_pth=config.evaluation['identification'], facene
                 peri_fea_pr, peri_lbl_pr = feature_extractor(perinet, probes, device = device, peri_flag = True)
                 peri_lbl_pr, face_lbl_gal = F.one_hot(peri_lbl_pr), F.one_hot(face_lbl_gal)
 
-                rng_f, cmc_f = calculate_cmc(face_fea_gal, peri_fea_pr, face_lbl_gal, peri_lbl_pr, last_rank=rank)
+                cmc_f = calculate_cmc(face_fea_gal, peri_fea_pr, face_lbl_gal, peri_lbl_pr, last_rank=rank)
                 cmc_lst_f = np.append(cmc_lst_f, np.array([cmc_f]), axis=0)
 
             for probes in face_data_loaders:                
@@ -182,7 +333,7 @@ def cm_cmc_extractor(model, root_pth=config.evaluation['identification'], facene
                 face_fea_pr, face_lbl_pr = feature_extractor(perinet, probes, device = device, peri_flag = False)
                 face_lbl_pr, peri_lbl_gal = F.one_hot(face_lbl_pr), F.one_hot(peri_lbl_gal)
 
-                rng_p, cmc_p = calculate_cmc(peri_fea_gal, face_fea_pr, peri_lbl_gal, face_lbl_pr, last_rank=rank)
+                cmc_p = calculate_cmc(peri_fea_gal, face_fea_pr, peri_lbl_gal, face_lbl_pr, last_rank=rank)
                 cmc_lst_p = np.append(cmc_lst_p, np.array([cmc_p]), axis=0)
                 
             cmc_f = np.mean(cmc_lst_f, axis=0)
@@ -207,9 +358,9 @@ def cm_cmc_extractor(model, root_pth=config.evaluation['identification'], facene
 
 if __name__ == '__main__':
     method = 'AELNet'
-    rank = 10
-    rng = np.arange(0, rank)+1
-    create_folder(method)
+    rank = 10  # CMC - rank > 1 (graph) or identification - rank = 1 (values)
+    if rank > 1:
+        create_folder(method)
     embd_dim = 1024
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 

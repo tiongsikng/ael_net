@@ -27,8 +27,8 @@ if __name__ == '__main__': # used for Windows freeze_support() issues, indent th
     from network.logits import ArcFace
     import network.ael_net as net
     import train
-    from eval import verification
-    from eval import identification
+    from eval import roc_eval_verification as verification
+    from eval import cmc_eval_identification as identification
     torch.multiprocessing.set_sharing_strategy('file_system')
     print("Imported.")
 
@@ -49,7 +49,7 @@ if __name__ == '__main__': # used for Windows freeze_support() issues, indent th
                         metavar='Weight Decay', help='weight decay')
     parser.add_argument('--dropout', '--dropout', default=params.dropout, type=float,
                         metavar='Dropout', help='dropout probability')
-    parser.add_argument('--pretrained', default='./models/pretrained/MobileFaceNet_1024.pt', type=str, metavar='PATH',
+    parser.add_argument('--pretrained', default='/home/tiongsik/Python/conditional_biometrics/models/pretrained/MobileFaceNet_1024.pt', type=str, metavar='PATH',
                         help='path to pretrained checkpoint (default: none)')
 
     args = parser.parse_args()
@@ -181,8 +181,6 @@ if __name__ == '__main__': # used for Windows freeze_support() issues, indent th
 
     train_mode = 'eval'
     model = net.AEL_Net(embedding_size = args.dim, do_prob = args.dropout).eval().to(device)
-    # model = net.Resnet(num_layers=50, feat_dim = args.dim, drop_ratio = args.dropout).eval().to(device)
-    # model = net.MobileFaceNet(embedding_size= args.dim, do_prob=args.dropout).eval().to(device)
 
     load_model_path = args.pretrained
     state_dict_loaded = model.state_dict()

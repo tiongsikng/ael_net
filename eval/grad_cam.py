@@ -1,7 +1,6 @@
 import os, sys, glob
 sys.path.insert(0, os.path.abspath('.'))
 import network.ael_net as net
-# import network.facexzoo_network.mobilefacenet as net
 import cv2
 import numpy as np
 import torch
@@ -160,15 +159,14 @@ if __name__ == '__main__':
     '''
 
     root_dir = './graphs/heatmap'
-    model_layer = 'mobilefacenet'
-    method = ''
+    model_layer = 'AELNet'
+    method = 'AELNet'
     modal = ['face','peri']
     pixel_size = (112, 112)
     heatmap_style = 'jet'
     aleph = 0.5
     base_image = True
     figsize = (5, 5)
-    # image_path = 'img.jpg'
 
     for modality in modal:
         modality = modality[:4]
@@ -182,19 +180,6 @@ if __name__ == '__main__':
     load_model_path = '/home/tiongsik/Python/ael_net/models/best_model/AELNet.pth'
     model = load_model.load_pretrained_network(model, load_model_path, device=device).eval()
     eval_layer = model.conv_6_sep
-
-    # # plot single image
-    # gradcam_img(gradcam_model, image_path, root_dir=root_dir, 
-    #             method=str(model_layer + method), modal=modal, base_img_pixels=pixel_size, 
-    #             heatmap_style=heatmap_style, aleph=aleph, base_image=base_image, figsize=figsize)
-
-    # # plot multiple images
-    # for modality in modal:
-    #     image_path = '/home/tiongsik/PycharmProjects/ideanet_cb/data/gradcam/' + str(modality) + '/1/*'
-    #     for images_path in tqdm(glob.glob(image_path)):
-    #         gradcam_img(model, eval_layer, images_path, root_dir=root_dir,
-    #             method=str(model_layer + method), modal=modality, base_img_pixels=pixel_size, 
-    #             heatmap_style=heatmap_style, aleph=aleph, base_image=base_image, figsize=figsize)
             
     # # plot multiple images
     for modality in modal:

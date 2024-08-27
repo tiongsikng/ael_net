@@ -16,13 +16,21 @@ torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 torch.multiprocessing.set_sharing_strategy('file_system')
 
-batch_size = 500
+batch_size = 400
 eer_dict = {'ethnic' : 0, 'pubfig' : 0, 'facescrub': 0, 'imdb_wiki' : 0, 'ar' : 0}
-peri_eer_dict = {}
-face_eer_dict = {}
-cm_eer_dict = {}
+auc_dict = {}
+fpr_dict = {}
+tpr_dict = {}
 dset_list = ['ethnic', 'pubfig', 'facescrub', 'imdb_wiki', 'ar']
 ver_img_per_class = 4
+
+
+def create_folder(method):
+    lists = ['peri', 'face', 'cm']
+    boiler_path = './data/roc/'
+    for modal in lists:
+        if not os.path.exists(os.path.join(boiler_path, method, modal)):
+            os.makedirs(os.path.join(boiler_path, method, modal))
 
 
 def get_avg(dict_list):
@@ -54,7 +62,7 @@ def eer_calc(gen_dist, imp_dist):
     eer_ = far_[np.nanargmin(np.absolute((frr_ - far_)))]
     auc_ = roc_auc_score(lbl_lst, dist_lst)
 
-    return eer_
+    return eer_, far_, tar_, auc_
 
 
 def compute_eer(fpr,tpr):
@@ -111,8 +119,8 @@ class dataset(data.Dataset):
         return ocular, onehot
 
 
-#### Cross-Modal Verification
-def cm_verify(model, face_model, peri_model, emb_size=1024, root_drt=config.evaluation['verification'], device='cuda:0'):
+#### Cross-Modal ROC
+def cm_verify(model, face_model, peri_model, emb_size=1024, root_drt=config.evaluation['verification'], device='cuda:0', eval_mode='verify'):
     for dset_name in dset_list:
         embedding_size = emb_size       
         
@@ -188,19 +196,38 @@ def cm_verify(model, face_model, peri_model, emb_size=1024, root_drt=config.eval
             y = np.concatenate((y_gen, y_imp))
 
             fpr_tmp, tpr_tmp, _ = roc_curve(y, score)
+            auc = roc_auc_score(y, score)
+            fpr_dict[dset_name] = fpr_tmp
+            tpr_dict[dset_name] = tpr_tmp
+            auc_dict[dset_name] = auc
             eer_dict[dset_name] = compute_eer(fpr_tmp, tpr_tmp)
 
-    return eer_dict
+    if eval_mode == 'roc':
+        return eer_dict, fpr_dict, tpr_dict, auc_dict
+    elif eval_mode == 'verify':
+        return eer_dict
+
 
 if __name__ == '__main__':
+    method = 'AELNet'
+    eval_mode = 'roc' # ROC (graph) or verification (values)
+    if eval_mode == 'roc':
+        create_folder(method)
     embd_dim = 1024
-    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu') 
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
     load_model_path = './models/best_model/AELNet.pth'
-    model = net.AEL_Net(embedding_size = embd_dim, do_prob=0.0).eval().to(device)    
+    model = net.AEL_Net(embedding_size = embd_dim, do_prob=0.0).eval().to(device)
     model = load_model.load_pretrained_network(model, load_model_path, device = device)
 
-    cm_eer_dict = cm_verify(model, face_model=None, peri_model=None, emb_size=embd_dim, root_drt=config.evaluation['verification'], device=device)
+    cm_eer_dict, cm_fpr_dict, cm_tpr_dict, cm_auc_dict = cm_verify(model, face_model=None, peri_model=None, emb_size=embd_dim, root_drt=config.evaluation['verification'], device=device, eval_mode=eval_mode)
     cm_eer_dict = copy.deepcopy(cm_eer_dict)
+    cm_fpr_dict = copy.deepcopy(cm_fpr_dict)
+    cm_tpr_dict = copy.deepcopy(cm_tpr_dict)
+    cm_auc_dict = copy.deepcopy(cm_auc_dict)
+    torch.save(cm_eer_dict, './data/roc/' + str(method) + '/cm/cm_eer_dict.pt')
+    torch.save(cm_fpr_dict, './data/roc/' + str(method) + '/cm/cm_fpr_dict.pt')
+    torch.save(cm_tpr_dict, './data/roc/' + str(method) + '/cm/cm_tpr_dict.pt')
+    torch.save(cm_auc_dict, './data/roc/' + str(method) + '/cm/cm_auc_dict.pt')
     cm_eer_dict = get_avg(cm_eer_dict)
     print('Average EER (Cross-Modal):', cm_eer_dict['avg'], '±', cm_eer_dict['std'])
