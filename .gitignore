@@ -3,6 +3,3 @@ runs/
 .ipynb_checkpoints/
 *.pt
 *.pth
-*.chkpt
-*.ckpt
-.vscode/

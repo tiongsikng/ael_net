@@ -204,7 +204,7 @@ if __name__ == '__main__': # used for Windows freeze_support() issues, indent th
 
     out_features = args.dim 
 
-    # for AELNet or MobileFaceNet
+    # for MobileFaceNet or AELNet
     in_features  = model.linear.in_features
     # model.linear = nn.Linear(in_features, out_features, bias = True)                      # Deep Embedding Layer
     # model.bn = nn.BatchNorm1d(out_features, eps = 1e-5, momentum = 0.1, affine = True) # BatchNorm1d Layer
