@@ -16,7 +16,7 @@ The project directory is as follows:
 - eval: Evaluation metrics (identification and verification). Also contains CMC and ROC evaluations.
     * cmc_eval_identification.py - Evaluates Rank-1 Identification Rate (IR) and generates Cumulative Matching Characteristic (CMC) curve, which are saved as `.pt` files in `data` directory. Use these `.pt` files to generate CMC curves.
     * plot_cmc_roc_sota.ipynb - Notebook to plot CMC and ROC curves side-by-side, based on generated `.pt` files from `cmc_eval.py` and `roc_eval.py`. Graph is generated in `graphs` directory.
-    * plot_tSNE.ipynb - otebook to plot t-SNE images based on the 10 identities of periocular-face toy examples. Example of text file (which correlates to the image paths) are in `data/visualization/tsne/img_lists`.
+    * plot_tSNE.ipynb - Notebook to plot t-SNE images based on the 10 identities of periocular-face toy examples. Example of text file (which correlates to the image paths) are in `data/visualization/tsne/img_lists`.
     * roc_eval_verification.py - Evaluates Verification Equal Error Rate (EER) and generates Receiver Operating Characteristic (ROC) curve, which are saved as `.pt` files in `data` directory. Use these `.pt` files to generate ROC curves.
 - graphs: Directory where graphs are generated.
     * _CMC and ROC curve .pt files are generated in this directory._
