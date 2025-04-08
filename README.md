@@ -72,3 +72,17 @@ Ensure that datasets are located in `data` directory. Configure `datasets_config
     ├──  main.py - Main file to run for training. Settings and hyperparameters are based on the files in <code>configs</code> directory.
     └──  train.py - Training file that is called from <code>main.py</code>. Gets batch of dataloader and contains criterion for loss back-propagation.
 </pre>
+
+#### Citation for this work:
+```
+@ARTICLE{ael_net,
+title = {Attention-aware ensemble learning for face-periocular cross-modality matching},
+journal = {Applied Soft Computing},
+volume = {175},
+pages = {113044},
+year = {2025},
+issn = {1568-4946},
+doi = {https://doi.org/10.1016/j.asoc.2025.113044},
+author = {Tiong-Sik Ng and Andrew Beng Jin Teoh}
+}
+```
