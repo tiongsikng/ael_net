@@ -46,31 +46,31 @@ Ensure that datasets are located in `data` directory. Configure `datasets_config
 ### The project directories are as follows:
 <pre>
 ├── configs: Dataset path configuration file and hyperparameters.
-│   ├──  datasets_config.py - Contains directory path for dataset files. Change 'main' in 'main_path' dictionary to point to dataset, e.g., <code>/home/ael_net/data</code> (without slash).
+│   ├── datasets_config.py - Contains directory path for dataset files. Change 'main' in 'main_path' dictionary to point to dataset, e.g., <code>/home/ael_net/data</code> (without slash).
 │   └──  params.py - Adjust hyperparameters and arguments in this file for training. 
 ├── data: Dataloader functions and preprocessing.
-│   ├──  <i><b>[INSERT DATASET HERE.]</i></b>
-│   └──  data_loader.py - Generate training and testing PyTorch dataloader. Adjust the augmentations etc. in this file. Batch size of data is also determined here, based on the values set in <code>params.py</code>.
+│   ├── <i><b>[INSERT DATASET HERE.]</i></b>
+│   └── data_loader.py - Generate training and testing PyTorch dataloader. Adjust the augmentations etc. in this file. Batch size of data is also determined here, based on the values set in <code>params.py</code>.
 ├── eval: Evaluation metrics (identification and verification). Also contains CMC and ROC evaluations.
-│   ├──  cmc_eval_identification.py - Evaluates Rank-1 Identification Rate (IR) and generates Cumulative Matching Characteristic (CMC) curve, which are saved as <code>.pt</code> files in <code>data</code> directory. Use these <code>.pt</code> files to generate CMC curves.
-│   ├──  plot_cmc_roc_sota.ipynb - Notebook to plot CMC and ROC curves side-by-side, based on generated <code>.pt</code> files from <code>cmc_eval_identification.py</code> and <code>roc_eval_verification.py</code>. Graph is generated in <code>graphs</code> directory.
-│   ├──  plot_tSNE.ipynb - Notebook to plot t-SNE images based on the 10 identities of periocular-face toy examples. Example of text file (which correlates to the image paths) are in <code>data/visualization/tsne/img_lists</code>.
-│   └──  roc_eval_verification.py - Evaluates Verification Equal Error Rate (EER) and generates Receiver Operating Characteristic (ROC) curve, which are saved as <code>.pt</code> files in <code>data</code> directory. Use these <code>.pt</code> files to generate ROC curves.
+│   ├── cmc_eval_identification.py - Evaluates Rank-1 Identification Rate (IR) and generates Cumulative Matching Characteristic (CMC) curve, which are saved as <code>.pt</code> files in <code>data</code> directory. Use these <code>.pt</code> files to generate CMC curves.
+│   ├── plot_cmc_roc_sota.ipynb - Notebook to plot CMC and ROC curves side-by-side, based on generated <code>.pt</code> files from <code>cmc_eval_identification.py</code> and <code>roc_eval_verification.py</code>. Graph is generated in <code>graphs</code> directory.
+│   ├── plot_tSNE.ipynb - Notebook to plot t-SNE images based on the 10 identities of periocular-face toy examples. Example of text file (which correlates to the image paths) are in <code>data/visualization/tsne/img_lists</code>.
+│   └── roc_eval_verification.py - Evaluates Verification Equal Error Rate (EER) and generates Receiver Operating Characteristic (ROC) curve, which are saved as <code>.pt</code> files in <code>data</code> directory. Use these <code>.pt</code> files to generate ROC curves.
 ├── graphs: Directory where graphs are generated.
-│   └──  <i>CMC and ROC curve file is generated in this directory. Some evaluation images are also generated in this directory.</i>
+│   └── <i>CMC and ROC curve file is generated in this directory. Some evaluation images are also generated in this directory.</i>
 ├── logs: Directory where logs are generated.
-│   └──  <i>Logs will be generated in this directory. Each log folder will contain backups of training files with network files and hyperparameters used.</i>
+│   └── <i>Logs will be generated in this directory. Each log folder will contain backups of training files with network files and hyperparameters used.</i>
 ├── models: Directory to store pre-trained models. Trained models are also generated in this directory.
-│   ├──  <i><b>[INSERT PRE-TRAINED MODELS HERE.]</i></b>
-│   ├──  <i>Trained models will also be stored in this directory.</i>
-│   └──  <i><b>The base MobileFaceNet for fine-tuning the AELNet can be downloaded in <a href="https://www.dropbox.com/scl/fi/l3k1h3tc12vy7puargfc3/MobileFaceNet_1024.pt?rlkey=m9zock9slmaivhij6sptjyzl6&e=1&st=jy9cb6oj&dl=0">this link</a>.</i></b>
+│   ├── <i><b>[INSERT PRE-TRAINED MODELS HERE.]</i></b>
+│   ├── <i>Trained models will also be stored in this directory.</i>
+│   └── <i><b>The base MobileFaceNet for fine-tuning the AELNet can be downloaded in <a href="https://www.dropbox.com/scl/fi/l3k1h3tc12vy7puargfc3/MobileFaceNet_1024.pt?rlkey=m9zock9slmaivhij6sptjyzl6&e=1&st=jy9cb6oj&dl=0">this link</a>.</i></b>
 ├── network: Contains loss functions and network related files.
-│   ├──  ael_net.py - Architecture file for AELNet.
-│   ├──  load_model.py - Loads pre-trained weights based on a given model.
-│   └──  logits.py - Contains some loss functions that are used.
+│   ├── ael_net.py - Architecture file for AELNet.
+│   ├── load_model.py - Loads pre-trained weights based on a given model.
+│   └── logits.py - Contains some loss functions that are used.
 └── <i>training:</i> Main files for training AELNet.
-    ├──  main.py - Main file to run for training. Settings and hyperparameters are based on the files in <code>configs</code> directory.
-    └──  train.py - Training file that is called from <code>main.py</code>. Gets batch of dataloader and contains criterion for loss back-propagation.
+    ├──  ain.py - Main file to run for training. Settings and hyperparameters are based on the files in <code>configs</code> directory.
+    └── train.py - Training file that is called from <code>main.py</code>. Gets batch of dataloader and contains criterion for loss back-propagation.
 </pre>
 
 #### Citation for this work:
