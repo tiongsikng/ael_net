@@ -16,7 +16,7 @@
 ## Pre-requisites:
 
 ### Environment
-Check `requirements.txt` file which was generated using `pip list --format=freeze > requirements.txt` command for the environment requirement. These files are slightly filtered manually, so there may be redundant packages.
+Check `requirements.txt` file. These files are slightly filtered manually, so there may be redundant packages.
 
 ### Dataset
 - Dataset (training and testing) can be downloaded from [this link](https://www.dropbox.com/scl/fi/idhbz8l276z5sq9illgqj/periocular_face_dataset.zip?rlkey=rv46tmub9mvcc7aeies2yi3bg&st=cdhrq5ge&dl=0). 
@@ -36,8 +36,8 @@ Check `requirements.txt` file which was generated using `pip list --format=freez
 ## Testing:
 1. Based on the (pre-)trained models in the `models/(pretrained/)` directory, load the correct model and the architecture (in `network/` directory) using `load_model.py` file. Change the file accordingly in case of different layer names, etc.
 2. Evaluation:
-    * Identification / Cumulative Matching Characteristic (CMC) curve: Run `cmc_eval_identification.py`. Based on the generated `.pt` files in `data` directory, run `plot_cmc_roc_sota.ipynb` to generate CMC graph.
-    * Verification / Receiver Operating Characteristic (ROC) curve: Run `roc_eval_verification.py`. Based on the generated `.pt` files in `data` directory, run `plot_cmc_roc_sota.ipynb` to generate ROC graph.
+    * Identification / Cumulative Matching Characteristic (CMC) curve: Run `cmc_eval_identification.py`. Based on the generated `.pt` files in `data/` directory, run `plot_cmc_roc_sota.ipynb` to generate CMC graph.
+    * Verification / Receiver Operating Characteristic (ROC) curve: Run `roc_eval_verification.py`. Based on the generated `.pt` files in `data/` directory, run `plot_cmc_roc_sota.ipynb` to generate ROC graph.
 3. Visualization:
     * Gradient-weighted Class Activation Mapping (Grad-CAM): Run `grad_cam.py`, based on the selected images that are stored in a directory. The images will be generated in the `graphs/` directory.
     * t-distributed stochastic neighbor embedding (t-SNE) : Run the Jupyter notebook accordingly. Based on the included text file in `data/visualization/tsne/img_lists`, 10 toy identities are selected to plot the t-SNE points, which will be generated in the `graphs/` directory.
